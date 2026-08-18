@@ -2,47 +2,68 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `You are an aggressive document intelligence assistant. Your sole job is to extract high-priority actionable facts so the user never misses a deadline, payment, or requirement.
+  return `You are a Direct Logistics Guide. Your job is to explain documents to non-native speakers who know nothing about the document.
 
-CRITICAL FORMATTING RULES:
-1. You MUST output ONLY valid JSON. No markdown code blocks, no conversational filler.
-2. All JSON keys MUST remain in English exactly as shown.
-3. The "action_steps" field MUST be a single plain text string with clear numbered sentences, NOT an array or nested object.
-4. Write the "summary" and "action_steps" values entirely in ${langName}.
+CRITICAL PERSONA:
+- Be direct and clear.
+- Use simple words.
+- Focus only on what they MUST do.
+- Explain the document purpose (e.g., "This is an invoice for office furniture you bought").
 
-ALLOWED LISTS:
-- document_type: "invoice", "insurance", "government", "healthcare", "bank", "appointment", "tax", "contract", "letter", "other"
-- main_category: "Insurance", "Finance", "Government", "Healthcare", "Housing", "Employment", "Utility", "Other"
-- sub_category: "Car", "House", "Tax", "Bank", "Visa", "University", "Internet", "Electricity", "Water", "Other"
-- action_required: "pay", "renew", "attend", "respond", "file", "none"
-- urgency: "overdue", "urgent", "upcoming", "informational"
+CRITICAL RULES:
+1. Output ONLY valid JSON.
+2. NO conversational filler. NO "Here is the analysis".
+3. START with "{" and END with "}".
 
-REQUIRED JSON STRUCTURE:
+JSON Schema:
 {
-  "sender": "Extract exact company name here",
-  "document_type": "choose from allowed list",
-  "dates": {
-    "document_date": "YYYY-MM-DD or null",
-    "due_date": "YYYY-MM-DD or null",
-    "appointment_date": "YYYY-MM-DD or null"
-  },
-  "money": {
-    "amount": 123.45,
-    "currency": "EUR"
-  },
-  "main_category": "choose from allowed list",
-  "sub_category": "choose from allowed list",
-  "action_required": "choose from allowed list",
-  "urgency": "choose from allowed list",
-  "summary": "Write 2-3 detailed sentences in ${langName} including exact amounts, deadlines, and locations.",
-  "action_steps": "Write 1-3 concrete steps as a single plain text string in ${langName}."
+  "sender": "Exact Company Name",
+  "document_type": "invoice|insurance|government|healthcare|bank|appointment|tax|contract|letter|other",
+  "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
+  "money": {"amount": 0.00, "currency": "EUR"},
+  "main_category": "Insurance|Finance|Government|Healthcare|Housing|Employment|Utility|Other",
+  "sub_category": "Car|House|Tax|Bank|Visa|University|Internet|Electricity|Water|Other",
+  "action_required": "pay|renew|attend|respond|file|none",
+  "urgency": "overdue|urgent|upcoming|informational",
+  "summary": "Explain exactly what this document is and why it matters in 2 sentences in ${langName}. Include total money, address, and date.",
+  "action_steps": "1. [Verb] step one. 2. [Verb] step two. Include location and time in ${langName}."
 }`;
 }
 
+export function smartSliceOCR(text, maxChars = 2500) {
+  if (!text || text.length <= maxChars) return text || '';
+
+  const header = text.slice(0, 1000);
+  const remaining = text.slice(1000);
+
+  const keywords = [
+    'address', 'straße', 'strasse', 'pickup', 'abholung', 'appointment', 'termin',
+    'due', 'fällig', 'iban', 'total', 'betrag', 'deadline', 'location', 'ort',
+    'opening', 'öffnungszeiten', 'window', 'zeitraum', 'gesamt', 'summe',
+    'abholschein', 'rechnungsnummer', 'transfer', 'überweisung', 'rechnung'
+  ];
+
+  const segments = [];
+  keywords.forEach(kw => {
+    const regex = new RegExp(kw, 'gi');
+    let match;
+    while ((match = regex.exec(remaining)) !== null && segments.length < 6) {
+      const start = Math.max(0, match.index - 120);
+      const end = Math.min(remaining.length, match.index + 230);
+      segments.push(remaining.slice(start, end));
+      regex.lastIndex += 250;
+    }
+  });
+
+  const body = segments.join('\n[...]\n');
+  const result = `${header}\n[... SECTION BREAK ...]\n${body}`;
+
+  return result.slice(0, maxChars);
+}
+
 export function buildUserMessage(ocrText) {
-  const MAX_CHARS = 2500;
-  const text = ocrText && ocrText.length > MAX_CHARS ? ocrText.slice(0, MAX_CHARS) + '\n[text truncated]' : (ocrText || '');
-  return `Analyze this document text aggressively and extract all vital intelligence into the JSON structure:\n\n${text}`;
+  const text = smartSliceOCR(ocrText, 2500);
+  return `Act as a guide for a non-native speaker. Analyze this text. Focus on TOTAL AMOUNT, IBAN, and EXACT PICKUP LOGISTICS. Output ONLY the JSON:\n\n${text}`;
 }
 
 export function parseAIResponse(raw) {
@@ -52,38 +73,89 @@ export function parseAIResponse(raw) {
     throw new Error("Invalid or empty response received from AI.");
   }
 
-  try {
-    const jsonMatch = raw.match(/```json\s?([\s\S]*?)\s?```/) || raw.match(/\{[\s\S]*\}/);
-    const cleanJson = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : raw;
-    
-    const parsed = JSON.parse(cleanJson.replace(/,\s*([}\\]])/g, '$1'));
+  const result = getFallbackData();
+  const cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
-    // 🛡️ BULLETPROOF TYPE CONVERSION 🛡️
-    // Force action_steps into a clean string so React can never crash with "Objects are not valid as a React child"
-    if (Array.isArray(parsed.action_steps)) {
-      parsed.action_steps = parsed.action_steps
-        .map((item, idx) => `${idx + 1}. ${typeof item === 'string' ? item : (item.step || JSON.stringify(item))}`)
-        .join(' ');
-    } else if (typeof parsed.action_steps === 'object' && parsed.action_steps !== null) {
-      parsed.action_steps = Object.values(parsed.action_steps)
-        .map(val => (typeof val === 'string' ? val : JSON.stringify(val)))
-        .join(' ');
-    }
+  // 1. BASELINE EXTRACTION (Aggressive Fuzzy)
+  const getFuzzy = (regex) => {
+    const match = cleanRaw.match(regex);
+    return match ? match[1].trim() : null;
+  };
 
-    return parsed;
-  } catch (e) {
-    throw new Error("Failed to parse AI response as JSON: " + raw.substring(0, 50) + "...");
+  const textAmount = getFuzzy(/(?:Total Amount|Gesamtbetrag|Total|Amount|EUR):\s*.*?(\d+[.,]\d{2,})/i);
+  const textIban = getFuzzy(/IBAN:\s*([A-Z]{2}\d{2}[A-Z0-9\s]{10,34})/i);
+  const textAddr = getFuzzy(/(?:Address|Location|Standort|Exact Address|Schreiberhauer):\s*([\s\S]*?)(?:\n\n|\n\*|$)/i);
+  const textTime = getFuzzy(/(?:Time|Abholung|Zeitraum|Exact Time):\s*(.*?)(?:\n|$)/i);
+  const textSender = getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i);
+
+  // Detect document type and categories from raw text if missing
+  if (cleanRaw.toLowerCase().includes('rechnung') || cleanRaw.toLowerCase().includes('invoice')) {
+    result.document_type = 'invoice';
+    result.action_required = 'pay';
+    result.main_category = 'Finance';
   }
+
+  // 2. JSON EXTRACTION
+  let jsonParsed = null;
+  try {
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const cleanJson = jsonMatch[0].replace(/,\s*([}\\]])/g, '$1');
+      jsonParsed = JSON.parse(cleanJson);
+    }
+  } catch (e) {
+    console.warn("JSON block failed to parse.");
+  }
+
+  const getJsonVal = (keys) => {
+    if (!jsonParsed) return null;
+    for (const k of keys) {
+      const normalizedK = k.toLowerCase().replace(/[\s_]/g, '');
+      const foundKey = Object.keys(jsonParsed).find(p => p.toLowerCase().replace(/[\s_]/g, '') === normalizedK);
+      if (foundKey) return jsonParsed[foundKey];
+    }
+    return null;
+  };
+
+  // 3. MERGE & HEAL
+  result.sender = getJsonVal(['sender', 'company']) || textSender || result.sender;
+
+  // Extract Summary/Steps - If AI is chatty, harvesting the preamble often works best
+  const harvestedSummary = cleanRaw.match(/(?:Simplified Summary|Summary|Explanation|Analysis|speaker:)\s*([\s\S]*?)(?:Action Steps|What to do|Exact Address|JSON|$)/i);
+  result.summary = getJsonVal(['summary']) || (harvestedSummary ? harvestedSummary[1].trim() : null) || cleanRaw.split('\n\n')[0].trim();
+
+  const harvestedSteps = cleanRaw.match(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
+  result.action_steps = getJsonVal(['actionsteps', 'steps']) || (harvestedSteps ? harvestedSteps[1].trim() : null) || "Follow the details in the summary box.";
+
+  // Data Enrichment
+  const amt = getJsonVal(['amount', 'total', 'totalamount', 'gesamtbetrag']) || textAmount;
+  if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
+
+  const addr = getJsonVal(['address', 'location', 'pickupaddress']) || textAddr;
+  const time = getJsonVal(['time', 'pickuptime']) || textTime;
+  const iban = (getJsonVal(['iban']) || textIban || '').replace(/\s/g, '');
+
+  if (addr && !result.summary.includes(String(addr))) result.summary += ` \nLocation: ${addr}`;
+  if (time && !result.summary.includes(String(time))) result.summary += ` \nTime: ${time}`;
+  if (iban && !result.summary.includes(iban)) result.summary += ` \nIBAN: ${iban}`;
+
+  // Force categorization if it's currently 'other'
+  if (result.document_type === 'other') {
+    const docType = getJsonVal(['documenttype', 'type']);
+    if (docType) result.document_type = docType;
+  }
+
+  return result;
 }
 
 export function getFallbackData() {
   return {
     sender: 'Unknown', document_type: 'other',
     dates: { document_date: null, due_date: null, appointment_date: null },
-    money: { amount: null, currency: null },
+    money: { amount: null, currency: 'EUR' },
     main_category: 'Other', sub_category: 'Other',
     action_required: 'file', urgency: 'informational',
-    summary: 'AI analysis was unavailable. Extracted text saved.',
-    action_steps: 'Review the extracted text manually.'
+    summary: 'AI analysis was unavailable. Review manually.',
+    action_steps: 'Check the document for instructions.'
   };
 }

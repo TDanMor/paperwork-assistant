@@ -89,7 +89,9 @@ export default function DocumentDetail({ docId }) {
         <div className="detail-info">
           <div className="detail-card" style={{ marginBottom: '1.25rem' }}>
             <h2>📋 {t('detail.summary')}</h2>
-            <p>{typeof doc.summary === 'string' ? doc.summary : JSON.stringify(doc.summary)}</p>
+            <p style={{ whiteSpace: 'pre-line' }}>
+              {typeof doc.summary === 'string' ? doc.summary : (doc.summary ? JSON.stringify(doc.summary) : 'No summary available.')}
+            </p>
           </div>
 
           {doc.action_steps && (

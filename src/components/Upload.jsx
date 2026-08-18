@@ -56,6 +56,12 @@ export default function Upload() {
             aiData = parseAIResponse(raw);
           } catch (aiErr) {
             console.error('AI chat execution failed:', aiErr);
+
+            // 🛡️ CRITICAL RECOVERY: If engine died, reset the UI state so it can re-load
+            if (!isModelLoaded()) {
+              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset occurred. Re-loading...' });
+            }
+
             aiData = getFallbackData();
           }
         } else {
