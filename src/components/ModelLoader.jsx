@@ -15,6 +15,11 @@ export default function ModelLoader() {
   }, [modelStatus]); 
 
   async function handleLoad() {
+    // If it was a fatal crash, wait a moment for the driver to recover
+    if (modelStatus === 'error') {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+
     dispatch({ type: 'SET_MODEL_STATUS', status: 'loading', progress: 0, message: 'Starting…' });
     try {
       await loadModel((pct, msg) => {

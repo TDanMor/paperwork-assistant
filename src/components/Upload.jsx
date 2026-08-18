@@ -28,46 +28,55 @@ export default function Upload() {
     setQueue(prev => [...prev, ...newItems]);
     dispatch({ type: 'SET_UPLOADING', payload: true });
 
+    // 🚀 SEQUENTIAL PROCESSING: One by one to protect GPU memory
     for (const item of newItems) {
       try {
-        // Step 1: OCR
+        // Step 1: OCR (Processing only this one item)
         updateItem(item.id, { status: 'processing_ocr', progress: 15 });
         const ocrText = await processFile(item.file, pct => updateItem(item.id, { progress: 15 + Math.round(pct * 0.4) }));
 
-        // Step 2: Wait for AI to be ready if it's currently loading in the background
+        // Step 2: Wait for AI to be ready (Patient Loop)
         updateItem(item.id, { status: 'processing_ai', progress: 60 });
         let waitSeconds = 0;
-        while (!isModelLoaded() && waitSeconds < 30) {
+        while (!isModelLoaded() && waitSeconds < 60) {
           if (state.modelStatus === 'error') break;
-          updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: 'Waiting for AI background load...' });
+          const msg = waitSeconds > 5 ? 'Waiting for GPU to cool down...' : 'AI preparing...';
+          updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: msg });
           await new Promise(r => setTimeout(r, 1000));
           waitSeconds++;
         }
 
-        // Step 3: AI Analysis
-        updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: '' });
+        // Step 3: AI Analysis (With Auto-Retry on Crash)
+        let retryCount = 0;
+        const maxRetries = 2;
         let aiData;
 
-        if (isModelLoaded()) {
+        while (retryCount <= maxRetries) {
           try {
+            updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying after GPU reset (${retryCount})...` : '' });
+
             const sys  = buildSystemPrompt(state.language);
             const user = buildUserMessage(ocrText);
             const raw  = await chat(sys, user);
             aiData = parseAIResponse(raw);
+            break;
           } catch (aiErr) {
-            console.error('AI chat execution failed:', aiErr);
+            console.error(`AI attempt ${retryCount + 1} failed:`, aiErr);
 
-            // 🛡️ CRITICAL RECOVERY: If engine died, reset the UI state so it can re-load
-            if (!isModelLoaded()) {
-              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset occurred. Re-loading...' });
+            const isGPUCrash = !isModelLoaded();
+            if (isGPUCrash && retryCount < maxRetries) {
+              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset triggered. Waiting to retry...' });
+              await new Promise(r => setTimeout(r, 5000)); // Wait for reset
+              retryCount++;
+              continue;
             }
-
             aiData = getFallbackData();
+            break;
           }
-        } else {
-          console.warn('AI model not ready, using fallback data.');
-          aiData = getFallbackData();
         }
+
+        // 🚀 POST-FLIGHT BREATH: Give the system a break after analysis
+        await new Promise(r => setTimeout(r, 1500));
 
         // Step 4: Saving
         updateItem(item.id, { status: 'saving', progress: 95 });

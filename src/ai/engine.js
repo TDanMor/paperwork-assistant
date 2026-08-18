@@ -3,10 +3,12 @@
 export const MODEL_ID = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
 export let engine = null;
 let aiActivated = false;
+let isProcessing = false;
+let isResetting = false; // 🔄 RESET LOCK
 
 export async function loadModel(progressCallback) {
-  // If engine exists but was lost/disposed, we need to rebuild it
-  if (engine) return;
+  // If we are currently resetting or already active, don't double-load
+  if (isResetting || engine) return;
   
   try {
     engine = await CreateMLCEngine(
@@ -17,10 +19,6 @@ export async function loadModel(progressCallback) {
             progressCallback(Math.round(report.progress * 100), report.text || '');
           }
         },
-        // 🚀 THE GOLDILOCKS ZONE 🚀
-        // 2048 tokens allows ~8,000 characters. 
-        // This is small enough to completely prevent the GPU "Device Hung" crashes, 
-        // but large enough to give the AI plenty of "brainpower" to write detailed steps!
         context_window_size: 2048
       }
     );
@@ -34,20 +32,39 @@ export async function loadModel(progressCallback) {
 }
 
 export function isModelLoaded() {
-  return aiActivated && engine !== null; 
+  return aiActivated && engine !== null && !isResetting;
 }
 
-// NEW: Allow force resetting the engine from the UI if a crash is detected
-export function resetEngineState() {
-  engine = null;
-  aiActivated = false;
+export function isEngineResetting() {
+  return isResetting;
+}
+
+export async function resetEngineState() {
+  if (isResetting) return;
+  isResetting = true;
+
+  try {
+    if (engine) {
+      await engine.unload();
+    }
+  } catch (e) {
+    console.warn("Clean unload failed, forcing nullify.");
+  } finally {
+    engine = null;
+    aiActivated = false;
+    isProcessing = false;
+    isResetting = false;
+  }
 }
 
 export async function chat(systemPrompt, userMessage) {
   if (!engine) throw new Error("Model not loaded");
+  if (isProcessing) throw new Error("AI is already busy with another document.");
+
+  isProcessing = true; // Engage lock
 
   try {
-    // Safely clear memory between runs
+    // 🧹 PRE-FLIGHT PURGE: Clear GPU cache before starting
     await engine.resetChat();
 
     const messages = [
@@ -58,15 +75,23 @@ export async function chat(systemPrompt, userMessage) {
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
-      max_tokens: 500 // Reduced from 800 to save VRAM headroom
+      max_tokens: 500
     });
 
-    return reply.choices[0].message.content;
+    const content = reply.choices[0].message.content;
+
+    // 🧹 POST-FLIGHT PURGE: Clear GPU cache immediately after finish
+    await engine.resetChat();
+
+    return content;
   } catch (err) {
     console.error("GPU Engine Error:", err);
 
-    // If the device is lost or object disposed, we MUST reset the engine
-    const isFatal = err.message.includes("disposed") || err.message.includes("lost") || err.message.includes("Device was lost");
+    const isFatal =
+      err.message.includes("disposed") ||
+      err.message.includes("lost") ||
+      err.message.includes("Device was lost") ||
+      err.message.includes("should not be 0");
 
     if (isFatal) {
       // Attempt clean unload if possible, then nullify
@@ -75,5 +100,7 @@ export async function chat(systemPrompt, userMessage) {
     }
 
     throw new Error(isFatal ? "GPU Memory Crashed. The engine is resetting..." : err.message);
+  } finally {
+    isProcessing = false; // Always release lock
   }
 }
