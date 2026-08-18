@@ -51,6 +51,29 @@ export default function DocumentDetail({ docId }) {
 
   const goBack = () => dispatch({ type: 'SET_VIEW', view: 'dashboard' });
 
+  // 🛡️ Bulletproof renderer helper for action steps (handles strings, arrays, or objects safely)
+  const renderActionSteps = (steps) => {
+    if (!steps) return null;
+    if (typeof steps === 'string') return <p style={{ whiteSpace: 'pre-line' }}>{steps}</p>;
+    if (Array.isArray(steps)) {
+      return (
+        <ul style={{ margin: 0, paddingLeft: '1.25rem' }}>
+          {steps.map((item, idx) => (
+            <li key={idx} style={{ marginBottom: '0.35rem' }}>
+              {typeof item === 'string' ? item : (item.step || item.action || JSON.stringify(item))}
+              {item.date && <span className="muted"> (Date: {item.date})</span>}
+              {item.time && <span className="muted"> (Time: {item.time})</span>}
+            </li>
+          ))}
+        </ul>
+      );
+    }
+    if (typeof steps === 'object') {
+      return <p>{Object.entries(steps).map(([k, v]) => `${k}: ${v}`).join(' — ')}</p>;
+    }
+    return <p>{String(steps)}</p>;
+  };
+
   return (
     <div className="page-container">
       <button className="btn btn-outline" onClick={goBack} style={{ alignSelf: 'flex-start' }}>
@@ -66,13 +89,13 @@ export default function DocumentDetail({ docId }) {
         <div className="detail-info">
           <div className="detail-card" style={{ marginBottom: '1.25rem' }}>
             <h2>📋 {t('detail.summary')}</h2>
-            <p>{doc.summary}</p>
+            <p>{typeof doc.summary === 'string' ? doc.summary : JSON.stringify(doc.summary)}</p>
           </div>
 
           {doc.action_steps && (
             <div className="detail-card detail-card--action" style={{ marginBottom: '1.25rem' }}>
               <h2>✅ {t('detail.steps')}</h2>
-              <p style={{ whiteSpace: 'pre-line' }}>{doc.action_steps}</p>
+              {renderActionSteps(doc.action_steps)}
             </div>
           )}
 

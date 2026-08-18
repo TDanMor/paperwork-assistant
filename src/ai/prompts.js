@@ -2,16 +2,13 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `You are a helpful personal assistant organizing a user's local documents. Read the provided text and summarize it into a structured JSON format.
+  return `You are an aggressive document intelligence assistant. Your sole job is to extract high-priority actionable facts so the user never misses a deadline, payment, or requirement.
 
-IMPORTANT INSTRUCTIONS:
-1. Respond ONLY with valid JSON. Do not include any apologies, conversational text, or refusals.
+CRITICAL FORMATTING RULES:
+1. You MUST output ONLY valid JSON. No markdown code blocks, no conversational filler.
 2. All JSON keys MUST remain in English exactly as shown.
-3. STRICT CATEGORIES: The values for document_type, main_category, sub_category, action_required, and urgency MUST exactly match the allowed lists below. DO NOT invent categories like "Telecom".
+3. The "action_steps" field MUST be a single plain text string with clear numbered sentences, NOT an array or nested object.
 4. Write the "summary" and "action_steps" values entirely in ${langName}.
-5. CRITICAL CONTEXT EXTRACTION: 
-   - SENDER: Extract the FULL EXACT COMPANY NAME from the letterhead (e.g., "1&1 Telecom GmbH", "Restlos GmbH"). DO NOT use "Unknown" if a company name is visible.
-   - DETAILS: Actively hunt for payment amounts, deadlines, pickup logistics, and account numbers. Include them in the summary.
 
 ALLOWED LISTS:
 - document_type: "invoice", "insurance", "government", "healthcare", "bank", "appointment", "tax", "contract", "letter", "other"
@@ -37,24 +34,46 @@ REQUIRED JSON STRUCTURE:
   "sub_category": "choose from allowed list",
   "action_required": "choose from allowed list",
   "urgency": "choose from allowed list",
-  "summary": "Write 2-3 sentences here in ${langName} capturing the core purpose.",
-  "action_steps": "Write 1-3 numbered steps here in ${langName}."
+  "summary": "Write 2-3 detailed sentences in ${langName} including exact amounts, deadlines, and locations.",
+  "action_steps": "Write 1-3 concrete steps as a single plain text string in ${langName}."
 }`;
 }
 
 export function buildUserMessage(ocrText) {
   const MAX_CHARS = 2500;
   const text = ocrText && ocrText.length > MAX_CHARS ? ocrText.slice(0, MAX_CHARS) + '\n[text truncated]' : (ocrText || '');
-  return `Here is the text from my document. Format the details into the exact JSON structure:\n\n${text}`;
+  return `Analyze this document text aggressively and extract all vital intelligence into the JSON structure:\n\n${text}`;
 }
 
 export function parseAIResponse(raw) {
-  console.log("Raw AI Output:", raw); 
-  let cleaned = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-  const start = cleaned.indexOf('{');
-  const end   = cleaned.lastIndexOf('}');
-  if (start === -1 || end === -1) throw new Error("No JSON boundaries found.");
-  return JSON.parse(cleaned.slice(start, end + 1));
+  console.log("Raw AI Response:", raw);
+  
+  if (!raw || typeof raw !== 'string') {
+    throw new Error("Invalid or empty response received from AI.");
+  }
+
+  try {
+    const jsonMatch = raw.match(/```json\s?([\s\S]*?)\s?```/) || raw.match(/\{[\s\S]*\}/);
+    const cleanJson = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : raw;
+    
+    const parsed = JSON.parse(cleanJson.replace(/,\s*([}\\]])/g, '$1'));
+
+    // 🛡️ BULLETPROOF TYPE CONVERSION 🛡️
+    // Force action_steps into a clean string so React can never crash with "Objects are not valid as a React child"
+    if (Array.isArray(parsed.action_steps)) {
+      parsed.action_steps = parsed.action_steps
+        .map((item, idx) => `${idx + 1}. ${typeof item === 'string' ? item : (item.step || JSON.stringify(item))}`)
+        .join(' ');
+    } else if (typeof parsed.action_steps === 'object' && parsed.action_steps !== null) {
+      parsed.action_steps = Object.values(parsed.action_steps)
+        .map(val => (typeof val === 'string' ? val : JSON.stringify(val)))
+        .join(' ');
+    }
+
+    return parsed;
+  } catch (e) {
+    throw new Error("Failed to parse AI response as JSON: " + raw.substring(0, 50) + "...");
+  }
 }
 
 export function getFallbackData() {

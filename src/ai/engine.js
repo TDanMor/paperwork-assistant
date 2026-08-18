@@ -13,12 +13,15 @@ export async function loadModel(progressCallback) {
       { 
         initProgressCallback: (report) => {
           if (progressCallback && report && typeof report.progress !== 'undefined') {
-            // Multiply by 100 and round off the long decimals! 
             progressCallback(Math.round(report.progress * 100));
           }
-        } 
-      }, 
-      { context_window_size: 2560 }
+        },
+        // 🚀 THE GOLDILOCKS ZONE 🚀
+        // 2048 tokens allows ~8,000 characters. 
+        // This is small enough to completely prevent the GPU "Device Hung" crashes, 
+        // but large enough to give the AI plenty of "brainpower" to write detailed steps!
+        context_window_size: 2048
+      }
     );
     aiActivated = true; 
   } catch (err) {
@@ -28,16 +31,14 @@ export async function loadModel(progressCallback) {
 }
 
 export function isModelLoaded() {
-  return aiActivated; 
+  return aiActivated && engine !== null; 
 }
 
 export async function chat(systemPrompt, userMessage) {
-  if (!engine && aiActivated) {
-    console.log("Waking up AI engine from cache...");
-    await loadModel();
-  }
-  
   if (!engine) throw new Error("Model not loaded");
+
+  // Safely clear memory between runs without causing disposal crashes
+  await engine.resetChat();
 
   const messages = [
     { role: "system", content: systemPrompt },
@@ -51,19 +52,9 @@ export async function chat(systemPrompt, userMessage) {
       max_tokens: 800   
     });
 
-    const result = reply.choices[0].message.content;
-
-    await engine.unload();
-    engine = null;
-    console.log("AI returned to sleep mode. GPU memory freed.");
-
-    return result;
+    return reply.choices[0].message.content;
   } catch (err) {
     console.error("GPU Engine Error:", err);
-    if (engine) {
-      await engine.unload().catch(() => {});
-      engine = null;
-    }
-    throw new Error("GPU crashed during analysis. Engine safely reset.");
+    throw new Error("GPU memory overwhelmed. Please refresh the page to reset the graphics driver.");
   }
 }
