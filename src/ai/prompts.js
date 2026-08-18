@@ -30,11 +30,11 @@ JSON Schema:
 }`;
 }
 
-export function smartSliceOCR(text, maxChars = 2500) {
+export function smartSliceOCR(text, maxChars = 2300) {
   if (!text || text.length <= maxChars) return text || '';
 
-  const header = text.slice(0, 1000);
-  const remaining = text.slice(1000);
+  const header = text.slice(0, 900);
+  const remaining = text.slice(900);
 
   const keywords = [
     'address', 'straße', 'strasse', 'pickup', 'abholung', 'appointment', 'termin',

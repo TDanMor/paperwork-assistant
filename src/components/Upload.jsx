@@ -22,64 +22,66 @@ export default function Upload() {
       status: 'pending',
       progress: 0,
       errorMsg: '',
-      savedDoc: null
+      savedDoc: null,
+      aiFailed: false
     }));
 
     setQueue(prev => [...prev, ...newItems]);
     dispatch({ type: 'SET_UPLOADING', payload: true });
 
-    // 🚀 SEQUENTIAL PROCESSING: One by one to protect GPU memory
+    // 🚀 SEQUENTIAL PROCESSING
     for (const item of newItems) {
       try {
-        // Step 1: OCR (Processing only this one item)
+        // Step 1: OCR
         updateItem(item.id, { status: 'processing_ocr', progress: 15 });
         const ocrText = await processFile(item.file, pct => updateItem(item.id, { progress: 15 + Math.round(pct * 0.4) }));
 
-        // Step 2: Wait for AI to be ready (Patient Loop)
-        updateItem(item.id, { status: 'processing_ai', progress: 60 });
-        let waitSeconds = 0;
-        while (!isModelLoaded() && waitSeconds < 60) {
-          if (state.modelStatus === 'error') break;
-          const msg = waitSeconds > 5 ? 'Waiting for GPU to cool down...' : 'AI preparing...';
-          updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: msg });
-          await new Promise(r => setTimeout(r, 1000));
-          waitSeconds++;
-        }
-
-        // Step 3: AI Analysis (With Auto-Retry on Crash)
+        // Step 2: AI Analysis (With Patient Auto-Retry)
+        let aiData = null;
         let retryCount = 0;
         const maxRetries = 2;
-        let aiData;
+        let wasAiSuccess = false;
 
         while (retryCount <= maxRetries) {
-          try {
-            updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying after GPU reset (${retryCount})...` : '' });
+          // A. Wait for Readiness
+          let waitSeconds = 0;
+          while (!isModelLoaded() && waitSeconds < 60) {
+            if (state.modelStatus === 'error') {
+              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'Recovering GPU...' });
+            }
+            updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: 'Waiting for GPU...' });
+            await new Promise(r => setTimeout(r, 2000));
+            waitSeconds += 2;
+          }
 
+          // B. Attempt Analysis
+          try {
+            updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
             const sys  = buildSystemPrompt(state.language);
             const user = buildUserMessage(ocrText);
             const raw  = await chat(sys, user);
             aiData = parseAIResponse(raw);
+            wasAiSuccess = true;
             break;
           } catch (aiErr) {
-            console.error(`AI attempt ${retryCount + 1} failed:`, aiErr);
-
-            const isGPUCrash = !isModelLoaded();
-            if (isGPUCrash && retryCount < maxRetries) {
-              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset triggered. Waiting to retry...' });
-              await new Promise(r => setTimeout(r, 5000)); // Wait for reset
+            console.error(`AI Attempt ${retryCount + 1} failed:`, aiErr);
+            if (!isModelLoaded()) {
+              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset. Recovering...' });
+              await new Promise(r => setTimeout(r, 3000));
               retryCount++;
               continue;
             }
-            aiData = getFallbackData();
             break;
           }
         }
 
-        // 🚀 POST-FLIGHT BREATH: Give the system a break after analysis
-        await new Promise(r => setTimeout(r, 1500));
+        if (!wasAiSuccess) {
+          aiData = getFallbackData();
+          updateItem(item.id, { aiFailed: true });
+        }
 
-        // Step 4: Saving
-        updateItem(item.id, { status: 'saving', progress: 95 });
+        // Step 3: Saving
+        updateItem(item.id, { status: 'saving', progress: 95, errorMsg: '' });
         const now = new Date();
         const doc = {
           file_name: item.file.name,
@@ -186,7 +188,8 @@ export default function Upload() {
                   )}
 
                   {item.status === 'error' && <span style={{ color: 'var(--c-overdue)', fontSize: '0.8rem', fontWeight: 700 }}>Failed</span>}
-                  {item.status === 'done' && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ Done</span>}
+                  {item.status === 'done' && !item.aiFailed && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ Done</span>}
+                  {item.status === 'done' && item.aiFailed && <span style={{ color: 'var(--c-urgent)', fontSize: '0.8rem', fontWeight: 700 }}>⚠️ AI Unavailable</span>}
                 </div>
 
               </div>
