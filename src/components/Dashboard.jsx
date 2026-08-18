@@ -1,0 +1,96 @@
+﻿import React, { useContext, useState } from 'react';
+import { AppContext } from '../App.jsx';
+import TaskTile from './TaskTile.jsx';
+import { t } from '../i18n/index.js';
+
+const URGENCY_ORDER = ['overdue', 'urgent', 'upcoming', 'informational'];
+
+export default function Dashboard() {
+  const { state } = useContext(AppContext);
+  const { documents } = state;
+
+  const grouped = Object.fromEntries(
+    URGENCY_ORDER.map(u => [u, documents.filter(d => d.urgency === u && !d.is_done)])
+  );
+
+  // Automatically open columns that have items, collapse empty ones
+  const [openCols, setOpenCols] = useState({
+    overdue: grouped.overdue.length > 0,
+    urgent: grouped.urgent.length > 0,
+    upcoming: grouped.upcoming.length > 0,
+    informational: grouped.informational.length > 0
+  });
+
+  function toggleCol(urg) {
+    setOpenCols(prev => ({ ...prev, [urg]: !prev[urg] }));
+  }
+
+  const totalActive = Object.values(grouped).reduce((acc, arr) => acc + arr.length, 0);
+  const isEmpty = totalActive === 0 && documents.length === 0;
+
+  // Generate an intuitive, human-friendly summary sentence
+  let summaryText = "Your desk is completely clean! No pending paperwork requires your attention.";
+  if (totalActive > 0) {
+    const parts = [];
+    if (grouped.overdue.length > 0) parts.push(`${grouped.overdue.length} needing immediate attention`);
+    if (grouped.urgent.length > 0) parts.push(`${grouped.urgent.length} due this week`);
+    if (grouped.upcoming.length > 0) parts.push(`${grouped.upcoming.length} on your radar`);
+    if (grouped.informational.length > 0) parts.push(`${grouped.informational.length} for your records`);
+    summaryText = `You have ${totalActive} active document${totalActive === 1 ? '' : 's'}: ${parts.join(', ')}.`;
+  }
+
+  return (
+    <div className="page-container" style={{ maxWidth: '100%' }}>
+      <h1 className="page-title">{t('dashboard.title')}</h1>
+
+      {/* Intuitive Human Summary Banner */}
+      <div style={{ padding: '1rem 1.25rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <span style={{ fontSize: '1.5rem' }}>💡</span>
+        <div>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.15rem 0' }}>Workspace Briefing</h2>
+          <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>{summaryText}</p>
+        </div>
+      </div>
+
+      {isEmpty ? (
+        <div className="empty-state">
+          <p>📭 {t('dashboard.no_tasks')}</p>
+        </div>
+      ) : (
+        <div className="kanban-board">
+          {URGENCY_ORDER.map(urg => {
+            const count = grouped[urg].length;
+            const isOpen = openCols[urg];
+
+            return (
+              <div key={urg} className="kanban-column" style={{ maxHeight: 'none' }}>
+                <div 
+                  className={`kanban-header urgency-heading--${urg}`} 
+                  onClick={() => toggleCol(urg)}
+                  style={{ cursor: 'pointer', userSelect: 'none' }}
+                  title="Click to collapse/expand"
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.8rem' }}>{isOpen ? '▼' : '▶'}</span>
+                    {t(`dashboard.sections.${urg}`)}
+                  </span>
+                  <span className="kanban-count">{count}</span>
+                </div>
+
+                {isOpen && (
+                  <div className="kanban-cards" style={{ marginTop: '0.75rem' }}>
+                    {count === 0 ? (
+                      <p className="muted" style={{ fontSize: '0.80rem', textAlign: 'center', padding: '1.5rem 0' }}>All clear in this category</p>
+                    ) : (
+                      grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

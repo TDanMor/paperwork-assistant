@@ -1,0 +1,184 @@
+﻿import React, { useContext, useState, useRef } from 'react';
+import { AppContext }       from '../App.jsx';
+import { processFile }      from '../ocr/processor.js';
+import { isModelLoaded, chat } from '../ai/engine.js';
+import { buildSystemPrompt, buildUserMessage, parseAIResponse, getFallbackData } from '../ai/prompts.js';
+import { saveDocument }     from '../storage/db.js';
+import { t }                from '../i18n/index.js';
+
+export default function Upload() {
+  const { state, dispatch } = useContext(AppContext);
+  const [queue, setQueue]       = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const fileRef = useRef(null);
+
+  async function handleFilesSelected(files) {
+    if (!files || files.length === 0) return;
+
+    const newItems = Array.from(files).map((file, index) => ({
+      id: Date.now() + index,
+      file,
+      name: file.name,
+      status: 'pending',
+      progress: 0,
+      errorMsg: '',
+      savedDoc: null
+    }));
+
+    setQueue(prev => [...prev, ...newItems]);
+    dispatch({ type: 'SET_UPLOADING', payload: true });
+
+    for (const item of newItems) {
+      try {
+        // Step 1: OCR
+        updateItem(item.id, { status: 'processing_ocr', progress: 15 });
+        const ocrText = await processFile(item.file, pct => updateItem(item.id, { progress: 15 + Math.round(pct * 0.4) }));
+
+        // Step 2: Wait for AI to be ready if it's currently loading in the background
+        updateItem(item.id, { status: 'processing_ai', progress: 60 });
+        let waitSeconds = 0;
+        while (!isModelLoaded() && waitSeconds < 30) {
+          if (state.modelStatus === 'error') break;
+          updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: 'Waiting for AI background load...' });
+          await new Promise(r => setTimeout(r, 1000));
+          waitSeconds++;
+        }
+
+        // Step 3: AI Analysis
+        updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: '' });
+        let aiData;
+
+        if (isModelLoaded()) {
+          try {
+            const sys  = buildSystemPrompt(state.language);
+            const user = buildUserMessage(ocrText);
+            const raw  = await chat(sys, user);
+            aiData = parseAIResponse(raw);
+          } catch (aiErr) {
+            console.error('AI chat execution failed:', aiErr);
+            aiData = getFallbackData();
+          }
+        } else {
+          console.warn('AI model not ready, using fallback data.');
+          aiData = getFallbackData();
+        }
+
+        // Step 4: Saving
+        updateItem(item.id, { status: 'saving', progress: 95 });
+        const now = new Date();
+        const doc = {
+          file_name: item.file.name,
+          file_type: item.file.type.startsWith('image/') ? 'image' : 'pdf',
+          file_data: item.file,
+          ocr_text:  ocrText,
+          ...aiData,
+          created_at: now.toISOString(),
+          year:       now.getFullYear(),
+          month:      now.getMonth() + 1,
+          language:   state.language,
+          is_done:    false
+        };
+
+        const saved = await saveDocument(doc);
+        dispatch({ type: 'ADD_DOCUMENT', document: saved });
+
+        updateItem(item.id, { status: 'done', progress: 100, savedDoc: saved, errorMsg: '' });
+
+      } catch (err) {
+        console.error('Queue item failed:', err);
+        updateItem(item.id, { status: 'error', errorMsg: err.message });
+      }
+    }
+
+    dispatch({ type: 'SET_UPLOADING', payload: false });
+  }
+
+  function updateItem(id, updates) {
+    setQueue(prev => prev.map(item => item.id === id ? { ...item, ...updates } : item));
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    handleFilesSelected(e.dataTransfer.files);
+  }
+
+  function clearQueue() {
+    setQueue([]);
+    if (fileRef.current) fileRef.current.value = '';
+  }
+
+  return (
+    <div className="page-container">
+      <h1 className="page-title">{t('upload.title')}</h1>
+
+      <div
+        className={`dropzone${dragging ? ' dropzone--over' : ''}`}
+        onDrop={onDrop}
+        onDragOver={e => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onClick={() => fileRef.current?.click()}
+      >
+        <div className="dropzone__icon">📤</div>
+        <p className="dropzone__hint">Drop multiple PDFs or images here, or click to browse</p>
+        <button className="btn btn-primary" onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>
+          {t('upload.select_file')}
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pdf,image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={e => handleFilesSelected(e.target.files)}
+        />
+      </div>
+
+      {queue.length > 0 && (
+        <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>📋 Processing Queue ({queue.filter(q => q.status === 'done').length}/{queue.length})</h2>
+            <button className="btn btn-outline btn-sm" onClick={clearQueue}>Clear Queue</button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {queue.map(item => (
+              <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', gap: '1rem', flexWrap: 'wrap' }}>
+                
+                <div style={{ flex: 1, minWidth: '200px' }}>
+                  <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.2rem' }}>📄 {item.name}</p>
+                  <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>
+                    {item.status === 'pending' && 'Waiting in queue...'}
+                    {item.status === 'processing_ocr' && 'Reading text (OCR)...'}
+                    {item.status === 'processing_ai' && (item.errorMsg || 'AI analyzing document...')}
+                    {item.status === 'saving' && 'Saving locally...'}
+                    {item.status === 'done' && 'Successfully processed!'}
+                    {item.status === 'error' && `Error: ${item.errorMsg}`}
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  {item.status !== 'done' && item.status !== 'error' && (
+                    <div className="progress-wrap" style={{ width: '100px' }}>
+                      <div className="progress-bar" style={{ width: `${item.progress}%` }} />
+                    </div>
+                  )}
+
+                  {item.status === 'done' && item.savedDoc && (
+                    <button className="btn btn-primary btn-sm" onClick={() => dispatch({ type: 'SET_VIEW', view: 'detail', docId: item.savedDoc.id })}>
+                      View Details
+                    </button>
+                  )}
+
+                  {item.status === 'error' && <span style={{ color: 'var(--c-overdue)', fontSize: '0.8rem', fontWeight: 700 }}>Failed</span>}
+                  {item.status === 'done' && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ Done</span>}
+                </div>
+
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
