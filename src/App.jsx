@@ -10,11 +10,13 @@ import FolderView      from './components/FolderView.jsx';
 import DocumentDetail  from './components/DocumentDetail.jsx';
 import Settings        from './components/Settings.jsx';
 import VaultLock       from './components/VaultLock.jsx';
-import { getAllDocuments } from './storage/db.js';
+import { getAllDocuments, setSessionKey } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
 
 // ---------- Context (shared with all child components) ----------
 export const AppContext = createContext(null);
+
+const LOCK_AFTER_MS = 15 * 60 * 1000; // 15 Minutes
 
 // ---------- Initial state ----------
 const initialState = {
@@ -76,6 +78,31 @@ function reducer(state, action) {
 // ---------- App ----------
 export default function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const lockTimerRef = React.useRef(null);
+
+  // 🔐 INACTIVITY AUTO-LOCK
+  const resetLockTimer = React.useCallback(() => {
+    if (state.isVaultLocked) return;
+
+    if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+
+    lockTimerRef.current = setTimeout(() => {
+      setSessionKey(null); // Wipe key from memory
+      dispatch({ type: 'SET_VAULT_LOCKED', payload: true });
+    }, LOCK_AFTER_MS);
+  }, [state.isVaultLocked]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resetLockTimer);
+    window.addEventListener('keydown', resetLockTimer);
+    resetLockTimer(); // Start timer on mount
+
+    return () => {
+      window.removeEventListener('mousemove', resetLockTimer);
+      window.removeEventListener('keydown', resetLockTimer);
+      if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
+    };
+  }, [resetLockTimer]);
 
   // Load all documents from IndexedDB when the app first mounts
   useEffect(() => {

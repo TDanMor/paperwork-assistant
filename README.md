@@ -47,10 +47,10 @@
 
 ## 🔒 Safety & Privacy Guarantee
 
-- **Personal Vault**: All sensitive data (Sender, Summary, OCR text) is encrypted at rest using **AES-GCM 256-bit**.
-- **PIN Protection**: Access requires a **6-digit PIN** (providing ~1 million combinations).
-- **Hardened Key Derivation**: Uses **PBKDF2-HMAC-SHA256** with **600,000 iterations**, making offline brute-force attacks computationally expensive.
-- **Session-Based Security**: Encryption keys exist only in volatile RAM and are wiped when the browser tab is closed.
+- **Personal Vault**: All sensitive data (Sender, Summary, OCR text) is encrypted at rest using **AES-GCM 256-bit**. This protects your data against casual and opportunistic access (e.g., family members or a lost device).
+- **PIN Protection**: Access requires a **6-digit PIN** (~1 million combinations).
+- **Hardened Key Derivation**: Uses **PBKDF2-HMAC-SHA256** with **600,000 iterations**, making each guess computationally expensive.
+- **Session-Based Security**: Encryption keys exist only in volatile RAM (`extractable: false`) and are wiped when the browser tab is closed or after 15 minutes of inactivity.
 - **Hardware Resilience**: The app includes built-in "Patience Loops" and automatic engine resets to manage GPU memory.
 
 ---
