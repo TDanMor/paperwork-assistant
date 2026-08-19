@@ -58,54 +58,63 @@ function mergeRanges(ranges) {
   return merged;
 }
 
-export function smartSliceOCR(text, maxChars = 2300) {
+export function smartSliceOCR(text, maxChars = 4500) {
   if (!text || text.length <= maxChars) return text || '';
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
 
   const ranges = [
-    { start: 0, end: 900 },
-    { start: totalLen - 500, end: totalLen }
+    { start: 0, end: 1200 },            // Larger Header (0-1200)
+    { start: totalLen - 600, end: totalLen } // Larger Tail (Last 600)
   ];
 
   const keywords = [
-    'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
-    'due', 'fällig', 'deadline', 'frist', 'scadență', 'vencimiento',
-    'abschluss', 'finalizare', 'completion', 'after', 'nach', 'după', 'voraussetzung', 'condition',
-    'erstatt', 'reimburse', 'zuschuss', 'festzuschuss', 'approval', 'genehmigung',
-    'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
-    'pickup', 'abholung', 'appointment', 'termin', 'cita',
-    'kostenplan', 'behandlung', 'zahnersatz', 'bescheid', 'rechnung', 'miet', 'bußgeld'
+    // PRIORITY 1: Logistics & Timing
+    'abholung', 'pickup', 'finalizare', 'nach abschluss', 'voraussetzung', 'termin', 'appointment', 'window', 'zeitraum',
+    'address', 'straße', 'location', 'ort', 'standort',
+    // PRIORITY 2: Financial/Legal Status
+    'iban', 'erstatt', 'reimburse', 'zuschuss', 'festzuschuss', 'genehmigung', 'bescheid',
+    'due', 'fällig', 'deadline', 'frist', 'scadență',
+    // PRIORITY 3: General Metadata
+    'total', 'amount', 'betrag', 'summe', 'gesamt', 'rechnung', 'invoice'
   ];
 
-  const bodyText = sanitized.slice(900, -500);
-  const bodyOffset = 900;
+  const bodyText = sanitized.slice(1200, -600);
+  const bodyOffset = 1200;
   let zoneCount = 0;
 
   keywords.forEach(kw => {
-    if (zoneCount >= 6) return;
+    if (zoneCount >= 8) return; // Allow more zones with larger budget
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(bodyText)) !== null && zoneCount < 6) {
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 8) {
       const start = Math.max(0, match.index - 150) + bodyOffset;
-      const end = Math.min(bodyText.length, match.index + 250) + bodyOffset;
+      const end = Math.min(bodyText.length, match.index + 300) + bodyOffset;
       ranges.push({ start, end });
       zoneCount++;
-      regex.lastIndex += 350;
+      regex.lastIndex += 400;
     }
   });
 
   const merged = mergeRanges(ranges);
-  const result = merged.map(r => sanitized.slice(r.start, r.end)).join('\n[...]\n');
-  return result.slice(0, maxChars);
+
+  // Assemble segments until we hit maxChars
+  let result = "";
+  for (const range of merged) {
+    const chunk = sanitized.slice(range.start, range.end);
+    if ((result.length + chunk.length + 10) > maxChars) break;
+    result += (result ? "\n[...]\n" : "") + chunk;
+  }
+
+  return result;
 }
 
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  const text = smartSliceOCR(ocrText, 2300);
+  const text = smartSliceOCR(ocrText, 4500);
 
-  return `<document>\n${text}\n</document>\n\nExpert analysis: Differentiate between a debt and a benefit. If this is a cost plan, emphasize the "after treatment" requirement. Respond ONLY in ${langName} JSON.`;
+  return `<document>\n${text}\n</document>\n\nExpert analysis: Differentiate between a debt and a benefit. Focus on LOGISTICS (Location, Time, Conditions). Respond ONLY in ${langName} JSON.`;
 }
 
 export function parseAIResponse(raw) {

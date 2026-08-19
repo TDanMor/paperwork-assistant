@@ -61,12 +61,12 @@ export default function Upload() {
             const sys = buildSystemPrompt(state.language);
 
             // 🛡️ Token-Aware Slicing
-            let text = smartSliceOCR(ocrText, 4000);
+            let text = smartSliceOCR(ocrText, 5000);
             const tokens = await getTokenCount(text);
-            const TOKEN_BUDGET = 1300;
+            const TOKEN_BUDGET = 1400;
 
             if (tokens > TOKEN_BUDGET) {
-              text = smartSliceOCR(ocrText, 2500);
+              text = smartSliceOCR(ocrText, 4000);
             }
 
             const user = buildUserMessage(text, state.language);
