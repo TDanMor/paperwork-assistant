@@ -2,16 +2,21 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Expert Doc Analyzer for non-native speakers. Output FLAT JSON in ${langName}.
+  return `Senior Admin Expert for non-native speakers. Output FLAT JSON in ${langName}.
 
-CRITICAL PERSONA:
-- Translate EVERY German term into simple ${langName}.
-- Never use terms like "Heil- und Kostenplan" or "zahnärztliche Praxis". Use "Dental Cost Plan" and "Dentist".
-- Be honest about TIMING. If action depends on a future event (like finishing treatment), say so.
+KNOWLEDGE BASE (German Docs):
+- "Heil- und Kostenplan" / "Zuschuss": NOT a bill. It is a subsidy approval. Action: "file". Timing: "Wait for treatment end, then submit invoice".
+- "Rechnung": Bill. Action: "pay".
+- "Mahnung": Late notice. Action: "pay". Urgency: "overdue".
+- "Bescheid": Official decision. Action: "respond" or "file".
 
-SCHEMA RULES:
-- summary: "This is [Document Type] from [Sender]. [Condition for action]. [What to do]."
-- action_steps: Array of simple translated tasks.
+FIELD RULES:
+- Translate ALL German terms into simple ${langName} (e.g., Dentist, Subsidy, Invoice).
+- summary: 1-2 direct sentences explaining doc purpose + timing (e.g., "Wait for X, then do Y"). NO "Location:", NO labels.
+- action_steps: Array of concrete tasks.
+- sender: Exact company name.
+- main_category: Insurance, Finance, Government, Healthcare, Housing, Employment, Utility, Other.
+- action_required: pay, respond, file, attend, renew, none.
 
 JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
@@ -73,7 +78,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nJSON in ${langName}. No labels. Direct facts only.`;
+  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nAnalyze doc. Output ${langName} JSON. No labels. No preamble.`;
 }
 
 export function parseAIResponse(raw) {
@@ -138,18 +143,25 @@ export function parseAIResponse(raw) {
   const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
   let summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : String(rawSummary);
 
-  // 🧹 CLEAN PREAMBLES & LABELS
-  const chatter = ["here is the output", "in english json", "json format", "logic:", "output:", "analysis:", "location:", "time:", "context:"];
+  const chatter = ["here is the output", "in english json", "json format", "logic:", "output:", "analysis:", "location:", "time:", "context:", "output:"];
   chatter.forEach(phrase => {
     const regex = new RegExp(`^.*?${phrase.replace(':', '\\:')}.*?(\\n|\\:|$)`, 'gi');
     summary = summary.replace(regex, '');
   });
   result.summary = summary.replace(/\{[\s\S]*?\}|\[[\s\S]*?\]/g, '').trim() || "No summary available.";
 
-  // 3. ACTION STEPS
+  // 3. ACTION STEPS (Split sentences into bullets if needed)
   const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
-  let steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : (rawSteps ? String(rawSteps) : "");
-  result.action_steps = steps.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim() || "Check the document for instructions.";
+  let steps = Array.isArray(rawSteps) ? rawSteps : (rawSteps ? String(rawSteps).split(/(?<=[.!?])\s+/) : []);
+
+  result.action_steps = steps
+    .map(s => s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim())
+    .filter(s => s.length > 5);
+
+  if (result.action_steps.length === 0) {
+     if (lowerRaw.includes("abschluss")) result.action_steps = ["Finish treatment.", "Submit documents to sender."];
+     else result.action_steps = ["Check the document for instructions."];
+  }
 
   // 4. METADATA & REFINEMENT
   result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
@@ -170,21 +182,18 @@ export function parseAIResponse(raw) {
   // 🛡️ SUBSIDY/HEALTHCARE OVERRIDE (DETERMINISTIC)
   if (lowerRaw.includes('kostenplan') || lowerRaw.includes('zuschuss') || lowerRaw.includes('genehmigung') || result.sender.includes('AOK')) {
     result.intent = 'CREDIT';
-    result.action_required = (act === 'pay' || act === 'none') ? 'file' : act;
+    result.action_required = 'file';
     result.document_type = lowerRaw.includes('kostenplan') ? 'cost_approval' : 'notice';
     result.main_category = 'Healthcare';
-    result.sub_category = 'Other';
   }
 
   // 5. MONEY & DATES
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
   if (moneyObj && typeof moneyObj === 'object') {
     result.money = { ...result.money, ...moneyObj };
-    // 🛡️ UI Fix: Strip redundant currency from the number if the AI put it there
     if (typeof result.money.amount === 'string') {
         result.money.amount = parseFloat(result.money.amount.replace(/[^0-9.]/g, ''));
     }
-    // Clean up currency string (remove EUR EUR issues)
     if (result.money.currency) {
         result.money.currency = result.money.currency.replace(/EUR/g, '').trim() || 'EUR';
     }
@@ -208,6 +217,6 @@ export function getFallbackData() {
     main_category: 'Other', sub_category: 'Other',
     action_required: 'file', urgency: 'informational',
     summary: 'AI analysis was unavailable. Review manually.',
-    action_steps: 'Check the document for instructions.'
+    action_steps: ['Check the document for instructions.']
   };
 }
