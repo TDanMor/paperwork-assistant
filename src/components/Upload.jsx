@@ -62,7 +62,7 @@ export default function Upload() {
 
             // 🛡️ DYNAMIC CONTEXT PRUNING:
             // On a retry, we aggressively shrink the context to guarantee VRAM safety.
-            const budgetLimit = retryCount > 0 ? 1500 : 2800;
+            const budgetLimit = retryCount > 0 ? 1200 : 2500;
             const text = smartSliceOCR(ocrText, budgetLimit);
 
             const user = buildUserMessage(text, state.language);

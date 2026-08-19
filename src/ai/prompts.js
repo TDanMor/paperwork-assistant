@@ -34,14 +34,14 @@ function mergeRanges(ranges) {
   return merged;
 }
 
-export function smartSliceOCR(text, maxChars = 2800) {
+export function smartSliceOCR(text, maxChars = 2500) {
   if (!text || text.length <= maxChars) return text || '';
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
 
   // Header & Tail are mandatory
   const ranges = [
-    { start: 0, end: 1000 },
+    { start: 0, end: 900 },
     { start: totalLen - 400, end: totalLen }
   ];
 

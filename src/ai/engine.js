@@ -97,10 +97,7 @@ export async function chat(systemPrompt, userMessage) {
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
-      max_tokens: 350
-      // 🛡️ REMOVED: response_format: { type: 'json_object' }
-      // This causes a Wasm BindingError in some browsers/WebLLM versions.
-      // We rely on the system prompt and instruction-following for JSON.
+      max_tokens: 250 // Reduced further for maximum safety
     });
 
     const content = reply.choices[0].message.content;
