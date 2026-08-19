@@ -5,30 +5,32 @@
   return `You are a Senior Administrative Expert for non-native speakers. Your job is to analyze complex documents and explain the "Real World" impact.
 
 CRITICAL UNDERSTANDING:
-1. INVOICE (Rechnung): User MUST pay money TO the sender. (Intent: DEBT)
-2. COST PLAN / APPROVAL (Heil- und Kostenplan / Bescheid): This is NOT a bill. It is an approval for a subsidy. The sender (e.g. AOK) will pay the user or a doctor later. (Intent: CREDIT or ACTION)
-3. NOTICE (Mitteilung): Information about a change or requirement. (Intent: ACTION or INFO)
+1. INVOICE (Rechnung): User MUST pay money TO the sender.
+2. COST PLAN / APPROVAL (Heil- und Kostenplan / Bescheid): This is NOT a bill. It is an approval for a subsidy. The sender (e.g. AOK) will pay the user or a doctor later.
+3. NOTICE (Mitteilung): Information about a change or requirement.
+
+ALLOWED LISTS (Use ONLY these exact keys):
+- document_type: "invoice", "notice", "contract", "government_letter", "employment", "healthcare", "bank", "appointment", "fine", "other"
+- main_category: "Finance", "Housing", "Government", "Employment", "Insurance", "Healthcare", "Utility", "Other"
+- action_required: "pay", "respond", "file", "attend", "renew", "none"
+- intent: "DEBT", "CREDIT", "ACTION"
 
 SUMMARY REQUIREMENTS for ${langName}:
 - Sentence 1: Clear identification (e.g. "This is a dental cost approval from AOK, not a bill.")
 - Sentence 2: The "When and How" (e.g. "After your treatment is finished, you must submit your final invoice to get 70% back.")
-- Include exact amounts (Total vs. Subsidy) and deadlines.
-
-ACTION STEPS for ${langName}:
-- Must be conditional if timing is involved (e.g. "Step 1: Finish treatment. Step 2: Send invoice to AOK.")
 
 JSON Schema (Respond ONLY with JSON):
 {
   "intent": "DEBT|CREDIT|ACTION",
-  "summary": "High-level expert explanation in ${langName}.",
-  "action_steps": "Numbered concrete steps with conditions in ${langName}.",
   "sender": "Exact Company Name",
-  "document_type": "invoice|notice|contract|government|healthcare|bank|appointment|fine|other",
+  "document_type": "choose from list",
   "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
   "money": {"amount": 0.00, "currency": "EUR"},
-  "main_category": "Finance|Housing|Government|Employment|Insurance|Healthcare|Utility|Other",
-  "action_required": "pay|respond|file|attend|renew|none",
-  "urgency": "overdue|urgent|upcoming|informational"
+  "main_category": "choose from list",
+  "action_required": "choose from list",
+  "urgency": "overdue|urgent|upcoming|informational",
+  "summary": "Expert explanation in ${langName}.",
+  "action_steps": "Numbered steps in ${langName}."
 }
 If a fact is missing, use null.`;
 }
@@ -63,20 +65,16 @@ export function smartSliceOCR(text, maxChars = 2300) {
 
   const ranges = [
     { start: 0, end: 900 },
-    { start: totalLen - 500, end: totalLen } // Slightly larger tail
+    { start: totalLen - 500, end: totalLen }
   ];
 
   const keywords = [
-    // Core Logistics
     'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
     'due', 'fällig', 'deadline', 'frist', 'scadență', 'vencimiento',
-    // Status & Conditions (CRITICAL)
     'abschluss', 'finalizare', 'completion', 'after', 'nach', 'după', 'voraussetzung', 'condition',
     'erstatt', 'reimburse', 'zuschuss', 'festzuschuss', 'approval', 'genehmigung',
-    // Locations
     'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
     'pickup', 'abholung', 'appointment', 'termin', 'cita',
-    // Document Specifics
     'kostenplan', 'behandlung', 'zahnersatz', 'bescheid', 'rechnung', 'miet', 'bußgeld'
   ];
 
@@ -156,7 +154,6 @@ export function parseAIResponse(raw) {
     return match ? match[1].trim() : null;
   };
 
-  // Sender
   const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'companyname', 'from']);
   if (rawSender && typeof rawSender === 'object') {
     result.sender = rawSender.company_name || rawSender.name || Object.values(rawSender)[0] || result.sender;
@@ -176,12 +173,21 @@ export function parseAIResponse(raw) {
   result.action_required = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
   result.urgency = findKeyInObj(jsonParsed, ['urgency', 'priority']) || result.urgency;
 
-  // DUAL LOGIC: If document mentions "Kostenplan" or "Zuschuss", refine classification
+  const validActions = ["pay", "respond", "file", "attend", "renew", "none"];
+  let act = String(result.action_required).toLowerCase();
+  if (!validActions.includes(act)) {
+    if (act.includes('pay')) act = 'pay';
+    else if (act.includes('respond') || act.includes('submit') || act.includes('send')) act = 'respond';
+    else if (act.includes('attend') || act.includes('appointment')) act = 'attend';
+    else if (act.includes('file') || act.includes('save')) act = 'file';
+    else act = 'none';
+  }
+  result.action_required = act;
+
   const lowerText = cleanRaw.toLowerCase();
   if (lowerText.includes('kostenplan') || lowerText.includes('zuschuss') || lowerText.includes('genehmigung')) {
-    if (result.action_required === 'pay') result.action_required = 'file';
     if (result.intent === 'DEBT') result.intent = 'CREDIT';
-    result.document_type = 'notice';
+    if (act === 'pay') result.action_required = 'file';
   }
 
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
