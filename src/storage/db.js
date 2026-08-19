@@ -1,67 +1,75 @@
-﻿// storage/db.js — All IndexedDB operations using the 'idb' library.
-import { openDB } from 'idb';
+﻿import { openDB } from 'idb';
 import { encryptData, decryptData } from '../utils/crypto.js';
 
 const DB_NAME    = 'paperwork-assistant';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Incremented for new meta store
 const STORE      = 'documents';
+const META_STORE = 'vault_meta';
 
-// 🛡️ ENCRYPTION GUARD: All PII is encrypted at rest if a PIN is provided.
-// The PIN should be kept in volatile memory only.
-let sessionPin = null;
+// 🛡️ ENCRYPTION GUARD: The CryptoKey stays in memory ONLY.
+let sessionKey = null;
 
-export function setSessionPin(pin) { sessionPin = pin; }
-export function isVaultLocked() { return sessionPin === null; }
+export function setSessionKey(key) { sessionKey = key; }
+export function isVaultLocked() { return sessionKey === null; }
 
 async function getDB() {
   return openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      const store = db.createObjectStore(STORE, {
-        keyPath:       'id',
-        autoIncrement: true,
-      });
-      store.createIndex('main_category',  'main_category');
-      store.createIndex('urgency',        'urgency');
-      store.createIndex('year',           'year');
-      store.createIndex('action_required','action_required');
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+          const store = db.createObjectStore(STORE, {
+            keyPath:       'id',
+            autoIncrement: true,
+          });
+          store.createIndex('main_category',  'main_category');
+          store.createIndex('urgency',        'urgency');
+          store.createIndex('year',           'year');
+          store.createIndex('action_required','action_required');
+      }
+      if (oldVersion < 2) {
+          // Store for the master salt
+          db.createObjectStore(META_STORE);
+      }
     },
   });
 }
 
 /**
- * Encrypts sensitive fields in a document before saving.
+ * Retrieves or generates the Master Salt for the vault.
  */
+export async function getVaultSalt() {
+  const db = await getDB();
+  let salt = await db.get(META_STORE, 'master_salt');
+
+  if (!salt) {
+    salt = crypto.getRandomValues(new Uint8Array(16));
+    await db.put(META_STORE, salt, 'master_salt');
+  }
+  return salt;
+}
+
 async function packDoc(doc) {
-  if (!sessionPin) return doc;
+  if (!sessionKey) return doc;
   const packed = { ...doc };
-  // Fields containing PII or sensitive logistics
-  const sensitiveFields = ['sender', 'summary', 'action_steps', 'ocr_text', 'file_data'];
+  const sensitiveFields = ['sender', 'summary', 'action_steps', 'ocr_text'];
 
   for (const field of sensitiveFields) {
-    if (packed[field]) {
-      // If it's a blob (file_data), convert to string/b64 first or skip
-      // For now, focusing on text fields.
-      if (typeof packed[field] === 'string') {
-        packed[field] = await encryptData(packed[field], sessionPin);
-      }
+    if (packed[field] && typeof packed[field] === 'string') {
+        packed[field] = await encryptData(packed[field], sessionKey);
     }
   }
   packed.is_encrypted = true;
   return packed;
 }
 
-/**
- * Decrypts sensitive fields after reading from DB.
- */
 async function unpackDoc(doc) {
-  if (!doc || !doc.is_encrypted || !sessionPin) return doc;
+  if (!doc || !doc.is_encrypted || !sessionKey) return doc;
   const unpacked = { ...doc };
   const sensitiveFields = ['sender', 'summary', 'action_steps', 'ocr_text'];
 
   for (const field of sensitiveFields) {
     if (unpacked[field]) {
       try {
-        unpacked[field] = await decryptData(unpacked[field], sessionPin);
+        unpacked[field] = await decryptData(unpacked[field], sessionKey);
       } catch (e) {
         unpacked[field] = '[LOCKED]';
       }

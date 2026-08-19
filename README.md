@@ -45,9 +45,13 @@
    npm run dev
    ```
 
-## 🔒 Safety & Stability Note
+## 🔒 Safety & Privacy Guarantee
 
-The app includes built-in "Patience Loops" and automatic engine resets to manage GPU memory. If the AI becomes unavailable during heavy processing, it will automatically attempt to reset and recover without requiring a page refresh.
+- **Personal Vault**: All sensitive data (Sender, Summary, OCR text) is encrypted at rest using **AES-GCM 256-bit**.
+- **PIN Protection**: Access requires a **6-digit PIN** (providing ~1 million combinations).
+- **Hardened Key Derivation**: Uses **PBKDF2-HMAC-SHA256** with **600,000 iterations**, making offline brute-force attacks computationally expensive.
+- **Session-Based Security**: Encryption keys exist only in volatile RAM and are wiped when the browser tab is closed.
+- **Hardware Resilience**: The app includes built-in "Patience Loops" and automatic engine resets to manage GPU memory.
 
 ---
 Built with ❤️ to make paperwork understandable for everyone.
