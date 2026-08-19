@@ -2,19 +2,22 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Expert Administrative Guide. Language: ${langName}.
-Instructions:
-1. Explain doc purpose simply.
-2. Identify ACTION: Pay X, Attend Y, or Submit Z after [Condition].
-3. If "Kostenplan" or "Zuschuss": It is a BENEFIT/SUBSIDY (User receives money), not a bill.
-4. If "Nach Abschluss": User must act ONLY after treatment/event is finished.
+  return `Expert Administrative Guide. Output FLAT JSON in ${langName}.
 
-Field Content Rules:
-- summary: 2 direct sentences. NO "Logic:", NO "Output:", NO chatter.
-- action_steps: Concrete steps (e.g. "1. Finish treatment. 2. Send invoice").
-- sender: Exact company/office name.
+REQUIRED FIELDS:
+- intent: "DEBT" (you pay), "CREDIT" (you receive), "ACTION" (just respond/file).
+- summary: Max 2 direct sentences. No labels like "Location:". (e.g., "AOK approved 70% dental subsidy. Submit final invoice after treatment.")
+- action_steps: Array of concrete tasks. (e.g., ["Finish treatment", "Mail invoice to AOK"])
+- sender: Exact company name (e.g., "AOK Bayern").
+- document_type: "invoice", "notice", "contract", "government_letter", "healthcare", "bank", "appointment", "fine", "other"
+- main_category: "Finance", "Housing", "Government", "Employment", "Insurance", "Healthcare", "Utility", "Other"
+- action_required: "pay", "respond", "file", "attend", "renew", "none"
+- urgency: "overdue", "urgent", "upcoming", "informational"
 
-JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
+CRITICAL:
+- "Heil- und Kostenplan" or "Zuschuss" = intent: "CREDIT", action_required: "file".
+- NEVER include instructions, logic, or labels in field values.
+- Respond ONLY with the JSON object.`;
 }
 
 function sanitizeForPrompt(text) {
@@ -45,20 +48,19 @@ export function smartSliceOCR(text, maxChars = 2500) {
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
 
-  // Header & Tail are mandatory
   const ranges = [
     { start: 0, end: 900 },
     { start: totalLen - 400, end: totalLen }
   ];
 
   const keywords = [
-    'abholung', 'pickup', 'finalizare', 'nach abschluss', 'voraussetzung', 'termin', 'appointment',
+    'abholung', 'pickup', 'nach abschluss', 'voraussetzung', 'termin', 'appointment',
     'address', 'straße', 'location', 'ort', 'standort', 'iban', 'erstatt', 'zuschuss',
     'festzuschuss', 'genehmigung', 'bescheid', 'due', 'fällig', 'deadline', 'total', 'betrag'
   ];
 
-  const bodyText = sanitized.slice(1000, -500);
-  const bodyOffset = 1000;
+  const bodyText = sanitized.slice(900, -400);
+  const bodyOffset = 900;
   let zoneCount = 0;
 
   keywords.forEach(kw => {
@@ -87,9 +89,9 @@ export function smartSliceOCR(text, maxChars = 2500) {
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  const text = smartSliceOCR(ocrText, 3500);
+  const text = smartSliceOCR(ocrText, 2500);
 
-  return `<document>\n${text}\n</document>\n\nAnalyze doc. Intent DEBT vs CREDIT? Focus LOGISTICS (Location, Time, Conditions). JSON in ${langName}.`;
+  return `<document>\n${text}\n</document>\n\nOutput ${langName} JSON. No labels. Direct values only.`;
 }
 
 export function parseAIResponse(raw) {
@@ -97,6 +99,12 @@ export function parseAIResponse(raw) {
   if (!raw || typeof raw !== 'string') throw new Error("Empty response.");
 
   const result = getFallbackData();
+  const lowerRaw = raw.toLowerCase();
+
+  // 🛡️ PRE-PARSER FIXES: Ensure AOK isn't lost
+  if (lowerRaw.includes("aok bayern")) result.sender = "AOK Bayern";
+  else if (lowerRaw.includes("aok")) result.sender = "AOK";
+
   let cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
   const findKeyInObj = (obj, targetKeys) => {
@@ -138,40 +146,41 @@ export function parseAIResponse(raw) {
     return match ? match[1].trim() : null;
   };
 
+  // 1. SENDER
   const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'companyname', 'from']);
   if (rawSender && typeof rawSender === 'object') {
     result.sender = rawSender.company_name || rawSender.name || Object.values(rawSender)[0] || result.sender;
+  } else if (rawSender) {
+    result.sender = rawSender;
   } else {
-    result.sender = rawSender || getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i) || result.sender;
+    result.sender = getFuzzy(/(?:Sender|Company|From):\s*"?([^"\n,]+)"?/i) || result.sender;
   }
 
+  // 2. SUMMARY
   const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
   let summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : String(rawSummary);
-
-  // 🧹 CLEANUP: Strip AI instructions leak (Logic:, Output:, etc)
-  summary = summary
-    .replace(/(Logic|Analysis|Output|Rules|Note|Schema):\s*[\s\S]*$/gi, '')
-    .replace(/Here is the (output|json)[\s\S]*?\{/gi, '')
-    .trim();
-
+  // Strip AI labels/logic
+  summary = summary.replace(/(Logic|Analysis|Output|Rules|Note|Schema|Location|Time|Context):\s*[\s\S]*$/gi, '').trim();
   result.summary = summary || "No summary available.";
 
-  const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i) || "Check the document for instructions.";
-  let steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : String(rawSteps);
-  if (steps.toLowerCase().includes("check the document")) {
-     // If AI failed, try a last-ditch fuzzy extraction for common "Nach Abschluss" pattern
-     if (cleanRaw.toLowerCase().includes("abschluss")) steps = "1. Finish the treatment or process. 2. Submit the resulting documents/invoice to the sender.";
+  // 3. ACTION STEPS
+  const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
+  let steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : (rawSteps ? String(rawSteps) : "");
+  steps = steps.replace(/(Logistics|Conditions):\s*[\s\S]*$/gi, '').trim();
+  if (!steps || steps.toLowerCase().includes("check the document")) {
+     if (lowerRaw.includes("abschluss")) steps = "1. Finish treatment. 2. Submit documents to sender.";
+     else steps = "Check the document for instructions.";
   }
   result.action_steps = steps;
 
+  // 4. METADATA
   result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
-  result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (cleanRaw.toLowerCase().includes('rechnung') ? 'invoice' : result.document_type);
+  result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (lowerRaw.includes('rechnung') ? 'invoice' : result.document_type);
   result.main_category = findKeyInObj(jsonParsed, ['maincategory', 'category']) || result.main_category;
-  result.action_required = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
-  result.urgency = findKeyInObj(jsonParsed, ['urgency', 'priority']) || result.urgency;
 
+  const rawAction = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
   const validActions = ["pay", "respond", "file", "attend", "renew", "none"];
-  let act = String(result.action_required).toLowerCase();
+  let act = String(rawAction).toLowerCase();
   if (!validActions.includes(act)) {
     if (act.includes('pay')) act = 'pay';
     else if (act.includes('respond') || act.includes('submit') || act.includes('send')) act = 'respond';
@@ -181,12 +190,15 @@ export function parseAIResponse(raw) {
   }
   result.action_required = act;
 
-  const lowerText = cleanRaw.toLowerCase();
-  if (lowerText.includes('kostenplan') || lowerText.includes('zuschuss') || lowerText.includes('genehmigung')) {
-    if (result.intent === 'DEBT') result.intent = 'CREDIT';
-    if (act === 'pay') result.action_required = 'file';
+  // 🛡️ REFINEMENT: If it's a subsidy/credit, fix categories
+  if (lowerRaw.includes('kostenplan') || lowerRaw.includes('zuschuss') || lowerRaw.includes('genehmigung')) {
+    result.intent = 'CREDIT';
+    result.action_required = (act === 'pay') ? 'file' : act;
+    result.document_type = 'notice';
+    result.main_category = 'Insurance';
   }
 
+  // 5. MONEY & DATES
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
   if (moneyObj && typeof moneyObj === 'object') {
     result.money = { ...result.money, ...moneyObj };
@@ -199,14 +211,6 @@ export function parseAIResponse(raw) {
   if (datesObj && typeof datesObj === 'object') {
     result.dates = { ...result.dates, ...datesObj };
   }
-
-  const textAddr = getFuzzy(/(?:Address|Location|Standort|Exact Address|Schreiberhauer):\s*([\s\S]*?)(?:\n\n|\n\*|$)/i);
-  const textTime = getFuzzy(/(?:Time|Abholung|Zeitraum|Exact Time):\s*(.*?)(?:\n|$)/i);
-  const textIban = getFuzzy(/IBAN:\s*([A-Z]{2}\d{2}[A-Z0-9\s]{10,34})/i);
-
-  if (textAddr && !result.summary.includes(String(textAddr))) result.summary += ` \nLocation: ${textAddr}`;
-  if (textTime && !result.summary.includes(String(textTime))) result.summary += ` \nTime: ${textTime}`;
-  if (textIban && !result.summary.includes(textIban)) result.summary += ` \nIBAN: ${textIban}`;
 
   return result;
 }
