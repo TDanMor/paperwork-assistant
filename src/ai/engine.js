@@ -5,6 +5,7 @@ export let engine = null;
 let aiActivated = false;
 let isProcessing = false;
 let isResetting = false;
+let lastTaskResetDone = true; // 🧹 TRACKER: Is the KV cache already clean?
 
 export async function loadModel(progressCallback) {
   if (isResetting || engine) return;
@@ -56,6 +57,20 @@ export async function resetEngineState() {
   }
 }
 
+/**
+ * Returns the token count for a given text.
+ */
+export async function getTokenCount(text) {
+  if (!engine) return 0;
+  try {
+    const tokens = await engine.tokenize(text);
+    return tokens.length;
+  } catch (e) {
+    console.warn("Tokenization failed:", e);
+    return Math.ceil(text.length / 3.5); // Fallback estimate
+  }
+}
+
 export async function chat(systemPrompt, userMessage, assistantPrefill = '') {
   if (!engine) throw new Error("Model not loaded");
   if (isProcessing) throw new Error("AI is already busy with another document.");
@@ -63,7 +78,10 @@ export async function chat(systemPrompt, userMessage, assistantPrefill = '') {
   isProcessing = true;
 
   try {
-    await engine.resetChat();
+    // 🧹 Purge on entry ONLY if the previous run didn't finish its cleanup
+    if (!lastTaskResetDone) {
+      await engine.resetChat();
+    }
 
     const messages = [
       { role: "system", content: systemPrompt },
@@ -77,14 +95,19 @@ export async function chat(systemPrompt, userMessage, assistantPrefill = '') {
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
-      max_tokens: 400
+      max_tokens: 450,
+      response_format: { type: 'json_object' } // 🛡️ Claude Audit Implementation: Force JSON mode
     });
 
     const content = reply.choices[0].message.content;
+
+    // 🧹 Mandatory purge after run to keep VRAM clean
     await engine.resetChat();
+    lastTaskResetDone = true;
 
     return content;
   } catch (err) {
+    lastTaskResetDone = false; // Flag as dirty on error
     console.error("GPU Engine Error:", err);
 
     const isFatal =

@@ -3,7 +3,19 @@
   const langName = langMap[language] || 'English';
 
   return `Analyze this document. Output ONLY valid JSON. All values in ${langName}.
-Keys MUST be: "sender", "document_type", "dates", "money", "main_category", "action_required", "urgency", "summary", "action_steps".
+JSON Schema:
+{
+  "intent": "DEBT|CREDIT|ACTION",
+  "sender": "Exact Company Name",
+  "document_type": "invoice|notice|contract|government|healthcare|bank|appointment|fine|other",
+  "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
+  "money": {"amount": 0.00, "currency": "EUR"},
+  "main_category": "Finance|Housing|Government|Employment|Insurance|Healthcare|Utility|Other",
+  "action_required": "pay|respond|file|attend|renew|none",
+  "urgency": "overdue|urgent|upcoming|informational",
+  "summary": "2 simple sentences in ${langName} explaining what to do.",
+  "action_steps": "Numbered steps in ${langName}."
+}
 If a fact is missing, use null. No prose.`;
 }
 
@@ -12,19 +24,43 @@ function sanitizeForPrompt(text) {
     .replace(/ignore (all |previous |above )?instructions?/gi, '[REDACTED]')
     .replace(/you are (now |a )?assistant/gi, '[REDACTED]')
     .replace(/system prompt/gi, '[REDACTED]')
-    .replace(/<\/document>/gi, ''); // Prevent tag escaping
+    .replace(/<\/document>/gi, '');
+}
+
+/**
+ * Merges overlapping text ranges to avoid redundant content in the prompt.
+ */
+function mergeRanges(ranges) {
+  if (ranges.length === 0) return [];
+  // Sort by start position
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const merged = [sorted[0]];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const last = merged[merged.length - 1];
+    if (sorted[i].start <= last.end) {
+      last.end = Math.max(last.end, sorted[i].end);
+    } else {
+      merged.push(sorted[i]);
+    }
+  }
+  return merged;
 }
 
 export function smartSliceOCR(text, maxChars = 2300) {
   if (!text || text.length <= maxChars) return text || '';
 
   const sanitized = sanitizeForPrompt(text);
-  const header = sanitized.slice(0, 800);
-  const tail = sanitized.slice(-400);
-  const body = sanitized.slice(800, -400);
+  const totalLen = sanitized.length;
 
+  // 1. Define mandatory ranges
+  const ranges = [
+    { start: 0, end: 900 },            // Golden Header
+    { start: totalLen - 400, end: totalLen } // Tail Capture
+  ];
+
+  // 2. Multi-language anchors
   const keywords = [
-    // Multi-language anchors (DE, EN, ES, FR, RO)
     'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
     'due', 'fällig', 'deadline', 'frist', 'scadență', 'echeance', 'vencimiento',
     'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
@@ -33,20 +69,33 @@ export function smartSliceOCR(text, maxChars = 2300) {
     'fine', 'bußgeld', 'amendă', 'multa', 'amende'
   ];
 
-  const segments = [];
+  // 3. Find keyword-anchored "Hot Zones"
+  const bodyText = sanitized.slice(900, -400);
+  const bodyOffset = 900;
+  let zoneCount = 0;
+
   keywords.forEach(kw => {
+    if (zoneCount >= 5) return;
     const regex = new RegExp(kw, 'gi');
     let match;
-    // Limit to 4 windows to stay within budget
-    while ((match = regex.exec(body)) !== null && segments.length < 4) {
-      const start = Math.max(0, match.index - 100);
-      const end = Math.min(body.length, match.index + 200);
-      segments.push(body.slice(start, end));
-      regex.lastIndex += 300;
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 5) {
+      const start = Math.max(0, match.index - 150) + bodyOffset;
+      const end = Math.min(bodyText.length, match.index + 250) + bodyOffset;
+      ranges.push({ start, end });
+      zoneCount++;
+      regex.lastIndex += 300; // Skip ahead to find diverse zones
     }
   });
 
-  const result = `${header}\n[...]\n${segments.join('\n[...]\n')}\n[...]\n${tail}`;
+  // 4. Merge overlapping ranges to deduplicate content
+  const merged = mergeRanges(ranges);
+
+  // 5. Assemble final string
+  const result = merged
+    .map(r => sanitized.slice(r.start, r.end))
+    .join('\n[...]\n');
+
+  // Hard safety cap
   return result.slice(0, maxChars);
 }
 
@@ -68,7 +117,7 @@ export function parseAIResponse(raw) {
   const result = getFallbackData();
   const cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
-  // 1. baseline extraction from plain text (Fuzzy)
+  // 1. BASELINE EXTRACTION (Aggressive Fuzzy)
   const getFuzzy = (regex) => {
     const match = cleanRaw.match(regex);
     return match ? match[1].trim() : null;
@@ -80,14 +129,13 @@ export function parseAIResponse(raw) {
   const textTime = getFuzzy(/(?:Time|Abholung|Zeitraum|Exact Time):\s*(.*?)(?:\n|$)/i);
   const textSender = getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i);
 
-  // Detect document type and categories from raw text if missing
   if (cleanRaw.toLowerCase().includes('rechnung') || cleanRaw.toLowerCase().includes('invoice')) {
     result.document_type = 'invoice';
     result.action_required = 'pay';
     result.main_category = 'Finance';
   }
 
-  // 2. JSON extraction
+  // 2. JSON EXTRACTION
   let jsonParsed = null;
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
@@ -112,14 +160,12 @@ export function parseAIResponse(raw) {
   // 3. MERGE & HEAL
   result.sender = getJsonVal(['sender', 'company']) || textSender || result.sender;
 
-  // Extract Summary/Steps - If AI is chatty, harvesting the preamble often works best
   const harvestedSummary = cleanRaw.match(/(?:Simplified Summary|Summary|Explanation|Analysis|speaker:)\s*([\s\S]*?)(?:Action Steps|What to do|Exact Address|JSON|$)/i);
   result.summary = getJsonVal(['summary']) || (harvestedSummary ? harvestedSummary[1].trim() : null) || cleanRaw.split('\n\n')[0].trim();
 
   const harvestedSteps = cleanRaw.match(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
   result.action_steps = getJsonVal(['actionsteps', 'steps']) || (harvestedSteps ? harvestedSteps[1].trim() : null) || "Follow the details in the summary box.";
 
-  // Data Enrichment
   const amt = getJsonVal(['amount', 'total', 'totalamount', 'gesamtbetrag']) || textAmount;
   if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
 
@@ -131,7 +177,6 @@ export function parseAIResponse(raw) {
   if (time && !result.summary.includes(String(time))) result.summary += ` \nTime: ${time}`;
   if (iban && !result.summary.includes(iban)) result.summary += ` \nIBAN: ${iban}`;
 
-  // Force categorization if it's currently 'other'
   if (result.document_type === 'other') {
     const docType = getJsonVal(['documenttype', 'type']);
     if (docType) result.document_type = docType;

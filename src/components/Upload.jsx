@@ -1,8 +1,8 @@
 ﻿import React, { useContext, useState, useRef } from 'react';
 import { AppContext }       from '../App.jsx';
 import { processFile }      from '../ocr/processor.js';
-import { isModelLoaded, chat } from '../ai/engine.js';
-import { buildSystemPrompt, buildUserMessage, parseAIResponse, getFallbackData } from '../ai/prompts.js';
+import { isModelLoaded, chat, getTokenCount } from '../ai/engine.js';
+import { buildSystemPrompt, buildUserMessage, parseAIResponse, getFallbackData, smartSliceOCR } from '../ai/prompts.js';
 import { saveDocument }     from '../storage/db.js';
 import { t }                from '../i18n/index.js';
 
@@ -57,12 +57,28 @@ export default function Upload() {
           // B. Attempt Analysis
           try {
             updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
-            const sys  = buildSystemPrompt(state.language);
-            const user = buildUserMessage(ocrText, state.language);
 
-            // 🛡️ Claude Audit Implementation: Pre-fill for JSON-first generation
-            const raw  = await chat(sys, user, '{"sender":');
-            aiData = parseAIResponse(raw.startsWith('{') ? raw : '{"sender":' + raw);
+            const sys = buildSystemPrompt(state.language);
+
+            // 🛡️ Claude Audit Implementation: Token-Aware Slicing
+            // We start with a larger slice and trim if token count is too high.
+            let text = smartSliceOCR(ocrText, 4000);
+            const tokens = await getTokenCount(text);
+            const TOKEN_BUDGET = 1300; // Calibrated for 2048 ctx window
+
+            if (tokens > TOKEN_BUDGET) {
+              // Fallback to more conservative slice if tokens are heavy (e.g. German legal)
+              text = smartSliceOCR(ocrText, 2500);
+            }
+
+            const user = buildUserMessage(text, state.language);
+
+            // 🛡️ Claude Audit Implementation: Pre-fill with "intent" to force classification first
+            const raw  = await chat(sys, user, '{"intent":');
+
+            // Re-attach the pre-fill for parsing
+            const fullRaw = raw.startsWith('{') ? raw : '{"intent":' + raw;
+            aiData = parseAIResponse(fullRaw);
 
             wasAiSuccess = true;
             break;

@@ -17,7 +17,12 @@ export function generateGoogleCalendarUrl(doc) {
   const title = encodeURIComponent(`[${action}] ${doc.sender || 'Paperwork Task'}`);
 
   // 3. Build Description (Summary + Steps)
+  // 🛡️ Claude Audit Implementation: Capped length to prevent URL injection/bloat
+  const MAX_DESC = 1000;
   let description = `${doc.summary || ''}\n\nSteps:\n${doc.action_steps || ''}`;
+  if (description.length > MAX_DESC) {
+    description = description.slice(0, MAX_DESC) + '... (truncated)';
+  }
   description = encodeURIComponent(description.trim());
 
   // 4. Try to find a location in the summary or OCR
