@@ -7,7 +7,7 @@ Respond ONLY with JSON. No prose. No "document" wrapper key.
 
 REQUIRED SCHEMA (Order is Critical):
 {
-  "intent": "DEBT|CREDIT|ACTION",
+  "intent": "CHOOSE ONE: DEBT | CREDIT | ACTION",
   "summary": "Explain exactly what this is and WHEN the user must act (Now? After treatment? Monthly?). Use 2 simple sentences in ${langName}.",
   "action_steps": "Numbered steps in ${langName}. Explicitly include timing/conditions (e.g., 'After finishing X, do Y').",
   "sender": "Exact Company Name",
@@ -122,7 +122,7 @@ export function parseAIResponse(raw) {
     if (!obj || typeof obj !== 'object') return null;
     for (const target of targetKeys) {
       const normalizedTarget = target.toLowerCase().replace(/[\s_]/g, '');
-      const foundKey = Object.keys(obj).find(k => k.toLowerCase().replace(/[\s_]/g, '') === normalizedK);
+      const foundKey = Object.keys(obj).find(k => k.toLowerCase().replace(/[\s_]/g, '') === normalizedTarget);
       if (foundKey) return obj[foundKey];
     }
     for (const k in obj) {
@@ -159,10 +159,22 @@ export function parseAIResponse(raw) {
   };
 
   result.sender = findKeyInObj(jsonParsed, ['sender', 'company']) || getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i) || result.sender;
-  result.summary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
-  result.action_steps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i) || "Check the document for instructions.";
+
+  // Normalize Summary & Steps
+  const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
+  result.summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : rawSummary;
+
+  const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i) || "Check the document for instructions.";
+  result.action_steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : rawSteps;
 
   result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
+  // If intent has options like "DEBT|CREDIT|ACTION", try to pick one based on document type
+  if (result.intent && result.intent.includes('|')) {
+     if (cleanRaw.toLowerCase().includes('rechnung') || cleanRaw.toLowerCase().includes('invoice')) result.intent = 'DEBT';
+     else if (cleanRaw.toLowerCase().includes('zuschuss') || cleanRaw.toLowerCase().includes('refund')) result.intent = 'CREDIT';
+     else result.intent = 'ACTION';
+  }
+
   result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (cleanRaw.toLowerCase().includes('rechnung') ? 'invoice' : result.document_type);
   result.main_category = findKeyInObj(jsonParsed, ['maincategory', 'category']) || result.main_category;
   result.action_required = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
