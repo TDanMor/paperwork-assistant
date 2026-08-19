@@ -2,14 +2,26 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Analyze this document. Output ONLY a FLAT valid JSON object.
-Respond ONLY with JSON. No prose. No "document" wrapper key.
+  return `You are a Senior Administrative Expert for non-native speakers. Your job is to analyze complex documents and explain the "Real World" impact.
 
-REQUIRED SCHEMA (Order is Critical):
+CRITICAL UNDERSTANDING:
+1. INVOICE (Rechnung): User MUST pay money TO the sender. (Intent: DEBT)
+2. COST PLAN / APPROVAL (Heil- und Kostenplan / Bescheid): This is NOT a bill. It is an approval for a subsidy. The sender (e.g. AOK) will pay the user or a doctor later. (Intent: CREDIT or ACTION)
+3. NOTICE (Mitteilung): Information about a change or requirement. (Intent: ACTION or INFO)
+
+SUMMARY REQUIREMENTS for ${langName}:
+- Sentence 1: Clear identification (e.g. "This is a dental cost approval from AOK, not a bill.")
+- Sentence 2: The "When and How" (e.g. "After your treatment is finished, you must submit your final invoice to get 70% back.")
+- Include exact amounts (Total vs. Subsidy) and deadlines.
+
+ACTION STEPS for ${langName}:
+- Must be conditional if timing is involved (e.g. "Step 1: Finish treatment. Step 2: Send invoice to AOK.")
+
+JSON Schema (Respond ONLY with JSON):
 {
-  "intent": "CHOOSE ONE: DEBT | CREDIT | ACTION",
-  "summary": "Explain exactly what this is and WHEN the user must act (Now? After treatment? Monthly?). Use 2 simple sentences in ${langName}.",
-  "action_steps": "Numbered steps in ${langName}. Explicitly include timing/conditions (e.g., 'After finishing X, do Y').",
+  "intent": "DEBT|CREDIT|ACTION",
+  "summary": "High-level expert explanation in ${langName}.",
+  "action_steps": "Numbered concrete steps with conditions in ${langName}.",
   "sender": "Exact Company Name",
   "document_type": "invoice|notice|contract|government|healthcare|bank|appointment|fine|other",
   "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
@@ -18,7 +30,7 @@ REQUIRED SCHEMA (Order is Critical):
   "action_required": "pay|respond|file|attend|renew|none",
   "urgency": "overdue|urgent|upcoming|informational"
 }
-If a fact is missing, use null. Translate summary and steps into ${langName}.`;
+If a fact is missing, use null.`;
 }
 
 function sanitizeForPrompt(text) {
@@ -29,14 +41,10 @@ function sanitizeForPrompt(text) {
     .replace(/<\/document>/gi, '');
 }
 
-/**
- * Merges overlapping text ranges to avoid redundant content in the prompt.
- */
 function mergeRanges(ranges) {
   if (ranges.length === 0) return [];
   const sorted = [...ranges].sort((a, b) => a.start - b.start);
   const merged = [sorted[0]];
-
   for (let i = 1; i < sorted.length; i++) {
     const last = merged[merged.length - 1];
     if (sorted[i].start <= last.end) {
@@ -50,52 +58,47 @@ function mergeRanges(ranges) {
 
 export function smartSliceOCR(text, maxChars = 2300) {
   if (!text || text.length <= maxChars) return text || '';
-
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
 
   const ranges = [
     { start: 0, end: 900 },
-    { start: totalLen - 400, end: totalLen }
+    { start: totalLen - 500, end: totalLen } // Slightly larger tail
   ];
 
   const keywords = [
-    // Finance/Logistics
+    // Core Logistics
     'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
-    'due', 'fällig', 'deadline', 'frist', 'scadență', 'echeance', 'vencimiento',
-    // Status/Timing (CRITICAL: Added for "After treatment" etc)
-    'abschluss', 'finalizare', 'completion', 'after', 'nach', 'după', 'status',
-    // Locations/Logistics
+    'due', 'fällig', 'deadline', 'frist', 'scadență', 'vencimiento',
+    // Status & Conditions (CRITICAL)
+    'abschluss', 'finalizare', 'completion', 'after', 'nach', 'după', 'voraussetzung', 'condition',
+    'erstatt', 'reimburse', 'zuschuss', 'festzuschuss', 'approval', 'genehmigung',
+    // Locations
     'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
-    'pickup', 'abholung', 'appointment', 'termin', 'programare', 'cita',
-    // Categories
-    'miet', 'rent', 'chirie', 'alquiler', 'loyer',
-    'fine', 'bußgeld', 'amendă', 'multa', 'amende',
-    'festzuschuss', 'zuschuss', 'kostenplan', 'genehmigung', 'bescheid'
+    'pickup', 'abholung', 'appointment', 'termin', 'cita',
+    // Document Specifics
+    'kostenplan', 'behandlung', 'zahnersatz', 'bescheid', 'rechnung', 'miet', 'bußgeld'
   ];
 
-  const bodyText = sanitized.slice(900, -400);
+  const bodyText = sanitized.slice(900, -500);
   const bodyOffset = 900;
   let zoneCount = 0;
 
   keywords.forEach(kw => {
-    if (zoneCount >= 5) return;
+    if (zoneCount >= 6) return;
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(bodyText)) !== null && zoneCount < 5) {
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 6) {
       const start = Math.max(0, match.index - 150) + bodyOffset;
       const end = Math.min(bodyText.length, match.index + 250) + bodyOffset;
       ranges.push({ start, end });
       zoneCount++;
-      regex.lastIndex += 300;
+      regex.lastIndex += 350;
     }
   });
 
   const merged = mergeRanges(ranges);
-  const result = merged
-    .map(r => sanitized.slice(r.start, r.end))
-    .join('\n[...]\n');
-
+  const result = merged.map(r => sanitized.slice(r.start, r.end)).join('\n[...]\n');
   return result.slice(0, maxChars);
 }
 
@@ -104,20 +107,16 @@ export function buildUserMessage(ocrText, language) {
   const langName = langMap[language] || 'English';
   const text = smartSliceOCR(ocrText, 2300);
 
-  return `<document>\n${text}\n</document>\n\nAnalyze the document above. Respond ONLY in ${langName} using the JSON schema.`;
+  return `<document>\n${text}\n</document>\n\nExpert analysis: Differentiate between a debt and a benefit. If this is a cost plan, emphasize the "after treatment" requirement. Respond ONLY in ${langName} JSON.`;
 }
 
 export function parseAIResponse(raw) {
   console.log("Raw AI Response:", raw);
-  
-  if (!raw || typeof raw !== 'string') {
-    throw new Error("Invalid or empty response received from AI.");
-  }
+  if (!raw || typeof raw !== 'string') throw new Error("Empty response.");
 
   const result = getFallbackData();
   let cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
-  // Helper to find a key anywhere in a potentially nested object
   const findKeyInObj = (obj, targetKeys) => {
     if (!obj || typeof obj !== 'object') return null;
     for (const target of targetKeys) {
@@ -145,12 +144,11 @@ export function parseAIResponse(raw) {
       try {
         jsonParsed = JSON.parse(jsonStr);
       } catch(e) {
-        const repaired = jsonStr.replace(/,\s*([}\]])/g, '$1');
-        jsonParsed = JSON.parse(repaired);
+        jsonParsed = JSON.parse(jsonStr.replace(/,\s*([}\]])/g, '$1'));
       }
     }
   } catch (e) {
-    console.warn("JSON parsing failed, falling back to regex.");
+    console.warn("JSON fail.");
   }
 
   const getFuzzy = (regex) => {
@@ -158,9 +156,14 @@ export function parseAIResponse(raw) {
     return match ? match[1].trim() : null;
   };
 
-  result.sender = findKeyInObj(jsonParsed, ['sender', 'company']) || getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i) || result.sender;
+  // Sender
+  const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'companyname', 'from']);
+  if (rawSender && typeof rawSender === 'object') {
+    result.sender = rawSender.company_name || rawSender.name || Object.values(rawSender)[0] || result.sender;
+  } else {
+    result.sender = rawSender || getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i) || result.sender;
+  }
 
-  // Normalize Summary & Steps
   const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
   result.summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : rawSummary;
 
@@ -168,17 +171,18 @@ export function parseAIResponse(raw) {
   result.action_steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : rawSteps;
 
   result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
-  // If intent has options like "DEBT|CREDIT|ACTION", try to pick one based on document type
-  if (result.intent && result.intent.includes('|')) {
-     if (cleanRaw.toLowerCase().includes('rechnung') || cleanRaw.toLowerCase().includes('invoice')) result.intent = 'DEBT';
-     else if (cleanRaw.toLowerCase().includes('zuschuss') || cleanRaw.toLowerCase().includes('refund')) result.intent = 'CREDIT';
-     else result.intent = 'ACTION';
-  }
-
   result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (cleanRaw.toLowerCase().includes('rechnung') ? 'invoice' : result.document_type);
   result.main_category = findKeyInObj(jsonParsed, ['maincategory', 'category']) || result.main_category;
   result.action_required = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
   result.urgency = findKeyInObj(jsonParsed, ['urgency', 'priority']) || result.urgency;
+
+  // DUAL LOGIC: If document mentions "Kostenplan" or "Zuschuss", refine classification
+  const lowerText = cleanRaw.toLowerCase();
+  if (lowerText.includes('kostenplan') || lowerText.includes('zuschuss') || lowerText.includes('genehmigung')) {
+    if (result.action_required === 'pay') result.action_required = 'file';
+    if (result.intent === 'DEBT') result.intent = 'CREDIT';
+    result.document_type = 'notice';
+  }
 
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
   if (moneyObj && typeof moneyObj === 'object') {

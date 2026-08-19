@@ -9,6 +9,15 @@ export function generateGoogleCalendarUrl(doc) {
   const rawDate = doc.dates?.appointment_date || doc.dates?.due_date;
   if (!rawDate) return null;
 
+  // 🛡️ Date Validation: Ensure it's a valid YYYY-MM-DD string
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+    console.warn("Skipping calendar URL generation: Invalid date format", rawDate);
+    return null;
+  }
+
+  const d = new Date(rawDate);
+  if (isNaN(d.getTime())) return null;
+
   // Format: YYYYMMDD
   const dateStr = rawDate.replace(/-/g, '');
 
