@@ -1,27 +1,40 @@
 ﻿import { CreateMLCEngine } from "@mlc-ai/web-llm";
 
-export const MODEL_ID = "Llama-3.2-3B-Instruct-q4f16_1-MLC";
+export const MODELS = {
+  pro: "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+  lite: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
+};
+
+// Default to pro, but can be changed by UI
+export let activeModelId = localStorage.getItem('pa_model_pref') || MODELS.pro;
 export let engine = null;
 let aiActivated = false;
 let isProcessing = false;
 let isResetting = false;
-let lastTaskResetDone = true; // 🧹 TRACKER: Is the KV cache already clean?
+let lastTaskResetDone = true;
+
+export function setActiveModel(mode) {
+  const newId = MODELS[mode] || MODELS.pro;
+  if (activeModelId !== newId) {
+    activeModelId = newId;
+    localStorage.setItem('pa_model_pref', newId);
+    resetEngineState(); // Force reload on next use
+  }
+}
 
 export async function loadModel(progressCallback) {
   if (isResetting || engine) return;
   
   try {
     engine = await CreateMLCEngine(
-      MODEL_ID,
+      activeModelId,
       { 
         initProgressCallback: (report) => {
           if (progressCallback && report && typeof report.progress !== 'undefined') {
             progressCallback(Math.round(report.progress * 100), report.text || '');
           }
         },
-        // 🚀 STABILITY BUFFERS
         context_window_size: 2048,
-        // Explicitly request high performance to avoid driver timeouts on Windows
         adapterOpts: { powerPreference: "high-performance" }
       }
     );

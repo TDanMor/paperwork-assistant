@@ -1,12 +1,21 @@
 ﻿import React, { useContext, useState } from 'react';
 import { AppContext }      from '../App.jsx';
-import { loadModel, MODEL_ID } from '../ai/engine.js';
+import { loadModel, MODELS, activeModelId, setActiveModel } from '../ai/engine.js';
 import { getAllDocuments, clearAllDocuments, saveDocument }   from '../storage/db.js';
 import { t } from '../i18n/index.js';
 
 export default function Settings() {
   const { state, dispatch } = useContext(AppContext);
   const [confirmText, setConfirmText] = useState('');
+
+  const isLite = activeModelId === MODELS.lite;
+
+  const handleModeChange = (mode) => {
+    if (window.confirm("Changing AI mode requires re-loading the model (~1-2 GB). Continue?")) {
+        setActiveModel(mode);
+        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'Switched mode. Ready to reload.' });
+    }
+  };
   const [exportPassword, setExportPassword] = useState('');
   const [restoreFile, setRestoreFile]       = useState(null);
   const [restorePassword, setRestorePassword] = useState('');
@@ -137,8 +146,30 @@ export default function Settings() {
       {/* AI Model */}
       <section className="settings-card">
         <h2>{t('settings.ai_model')}</h2>
-        <p className="muted">Llama 3.2 3B Instruct (q4f16)</p>
-        <p className="muted" style={{ fontSize:'0.75rem', wordBreak:'break-all' }}>Model ID: {MODEL_ID}</p>
+
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <button
+            className={`btn ${isLite ? 'btn-outline' : 'btn-primary'}`}
+            onClick={() => handleModeChange('pro')}
+            style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>🏆 Pro Mode</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Llama 3.2 3B (Best Accuracy)</span>
+            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>Needs 4GB+ VRAM</span>
+          </button>
+
+          <button
+            className={`btn ${isLite ? 'btn-primary' : 'btn-outline'}`}
+            onClick={() => handleModeChange('lite')}
+            style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
+          >
+            <span style={{ fontSize: '1.1rem' }}>⚡ Lite Mode</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Llama 3.2 1B (High Stability)</span>
+            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>Perfect for Phones & Tablets</span>
+          </button>
+        </div>
+
+        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Model ID: {activeModelId}</p>
         <p className="muted">{t('settings.model_status')}: <strong>{state.modelStatus}</strong>{state.modelStatus === 'loading' && ` — ${state.modelProgress}%`}{state.modelStatus === 'ready' && ' ✅'}</p>
         {state.modelStatus !== 'ready' && (
           <button className="btn btn-primary" onClick={handleLoadModel} disabled={state.modelStatus === 'loading'}>
