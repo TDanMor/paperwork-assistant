@@ -146,7 +146,7 @@ export default function Upload() {
         onClick={() => fileRef.current?.click()}
       >
         <div className="dropzone__icon">📤</div>
-        <p className="dropzone__hint">Drop multiple PDFs or images here, or click to browse</p>
+        <p className="dropzone__hint">{t('upload.drop_hint')}</p>
         <button className="btn btn-primary" onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>
           {t('upload.select_file')}
         </button>

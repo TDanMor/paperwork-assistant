@@ -37,7 +37,7 @@ export default function FolderView() {
       <div className="page-container">
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
           <h1 className="page-title" style={{ flex: 1 }}>🔍 {t('folders.search_results')}</h1>
-          <input type="text" placeholder={`${t('folders.search_placeholder')}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} autoFocus />
+          <input type="text" placeholder={t('folders.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} autoFocus />
         </div>
         <div className="doc-list">
           {results.length === 0 ? <p className="empty-state">{t('folders.no_matches')}</p> : results.map(doc => (
