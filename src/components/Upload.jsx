@@ -68,7 +68,7 @@ export default function Upload() {
             const user = buildUserMessage(text, state.language);
 
             const raw  = await chat(sys, user);
-            aiData = parseAIResponse(raw);
+            aiData = parseAIResponse(raw, ocrText);
 
             wasAiSuccess = true;
             break;
