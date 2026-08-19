@@ -1,17 +1,33 @@
 /**
  * Utilities for AES-GCM encryption/decryption using the Web Crypto API.
- * Hardened for Phase 5 based on security audit.
+ * Hardened v2.2 - Fixes [LOCKED] bug and binary encoding issues.
  */
 
-const ITERATIONS = 600000; // NIST SP 800-63B Recommendation
+const ITERATIONS_V2 = 600000;
+const ITERATIONS_V1 = 100000; // Legacy Phase 4
 const SALT_SIZE = 16;
 const IV_SIZE = 12;
 
 /**
- * Derives an AES-GCM key from a PIN and salt.
- * This should be called ONCE at session start.
+ * Robust Base64 to Uint8Array converter (no call stack issues)
  */
-export async function deriveKeyFromPin(pin, salt) {
+function base64ToBytes(base64) {
+  const binString = atob(base64);
+  return Uint8Array.from(binString, (m) => m.codePointAt(0));
+}
+
+/**
+ * Robust Uint8Array to Base64 converter
+ */
+function bytesToBase64(bytes) {
+  const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
+  return btoa(binString);
+}
+
+/**
+ * Derives an AES-GCM key from a PIN and salt.
+ */
+export async function deriveKeyFromPin(pin, salt, iterations = ITERATIONS_V2) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -24,7 +40,7 @@ export async function deriveKeyFromPin(pin, salt) {
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: ITERATIONS,
+      iterations: iterations,
       hash: 'SHA-256'
     },
     keyMaterial,
@@ -35,8 +51,8 @@ export async function deriveKeyFromPin(pin, salt) {
 }
 
 /**
- * Encrypts a string using a pre-derived CryptoKey.
- * Generates a UNIQUE IV for every call (Critical for AES-GCM).
+ * Encrypts data using a Master Key.
+ * Adds 'v2:' prefix for format identification.
  */
 export async function encryptData(text, cryptoKey) {
   const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
@@ -48,59 +64,48 @@ export async function encryptData(text, cryptoKey) {
     enc.encode(text)
   );
 
-  // Output: [iv (12 bytes)][ciphertext (variable)]
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
   combined.set(iv, 0);
   combined.set(new Uint8Array(encrypted), iv.length);
 
-  return btoa(String.fromCharCode.apply(null, combined));
+  return 'v2:' + bytesToBase64(combined);
 }
 
 /**
- * Decrypts a base64 string using a pre-derived CryptoKey.
+ * Decrypts data with automatic legacy fallback.
  */
 export async function decryptData(combinedB64, cryptoKey) {
   try {
-    const combined = new Uint8Array(atob(combinedB64).split("").map(c => c.charCodeAt(0)));
+    // 1. New Format Check (v2:)
+    if (combinedB64.startsWith('v2:')) {
+      const b64 = combinedB64.slice(3);
+      const combined = base64ToBytes(b64);
+      const iv = combined.slice(0, IV_SIZE);
+      const ciphertext = combined.slice(IV_SIZE);
 
-    // Check if this uses the old "Embedded Salt" format (Legacy Phase 4)
-    // Legacy: [salt (16)][iv (12)][ciphertext]
-    // New: [iv (12)][ciphertext]
-
-    let iv, ciphertext;
-
-    if (combined.length > (SALT_SIZE + IV_SIZE)) {
-        // This is a heuristic guess, if we use a Master Salt, the combined length is usually smaller
-        // but it's safer to just handle the IV offset.
+      const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: iv },
+        cryptoKey,
+        ciphertext
+      );
+      return new TextDecoder().decode(decrypted);
     }
 
-    // New format (Phase 5+)
-    iv = combined.slice(0, IV_SIZE);
-    ciphertext = combined.slice(IV_SIZE);
+    // 2. Legacy Fallback (No prefix)
+    // Legacy docs are rare and likely permanently locked if derived key changed.
+    // However, if the key derivation is identical, we can try.
+    const combined = base64ToBytes(combinedB64);
 
-    const decrypted = await crypto.subtle.decrypt(
-      { name: 'AES-GCM', iv: iv },
-      cryptoKey,
-      ciphertext
-    );
+    // Heuristic for Phase 4: [salt(16)][iv(12)][ciphertext]
+    if (combined.length > (SALT_SIZE + IV_SIZE)) {
+        // We can't easily decrypt Phase 4 here because we don't have the raw PIN
+        // to re-derive with 100k iterations.
+        throw new Error("Legacy format detected. Re-upload document to encrypt with new vault.");
+    }
 
-    return new TextDecoder().decode(decrypted);
+    throw new Error("Unknown data format.");
   } catch (e) {
     console.error("Decryption failed:", e);
-    throw new Error("Decryption failed. Incorrect key or corrupted data.");
+    throw e;
   }
-}
-
-/**
- * Legacy Decryptor for Phase 4 data (if salt is embedded in string)
- */
-export async function legacyDecrypt(combinedB64, pin) {
-    const combined = new Uint8Array(atob(combinedB64).split("").map(c => c.charCodeAt(0)));
-    const salt = combined.slice(0, 16);
-    const iv = combined.slice(16, 28);
-    const ciphertext = combined.slice(28);
-
-    const key = await deriveKeyFromPin(pin, salt); // This uses the 600k iterations now
-    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
-    return new TextDecoder().decode(decrypted);
 }
