@@ -138,7 +138,11 @@ export function parseAIResponse(raw) {
   // 1. SENDER
   const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'from']);
   if (rawSender && typeof rawSender === 'object') {
-    result.sender = rawSender.company_name || rawSender.name || Object.values(rawSender)[0] || result.sender;
+    result.sender = rawSender.organization || rawSender.company_name || rawSender.company || rawSender.name || Object.values(rawSender)[0] || result.sender;
+    // If the sender name matched the user's name (common AI mistake), try organization
+    if (result.sender.toLowerCase().includes("tony") && rawSender.organization) {
+      result.sender = rawSender.organization;
+    }
   } else if (rawSender) {
     result.sender = rawSender;
   }
@@ -170,7 +174,11 @@ export function parseAIResponse(raw) {
   const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
   let steps = Array.isArray(rawSteps) ? rawSteps : (rawSteps ? String(rawSteps).split(/(?<=[.!?])\s+/) : []);
   result.action_steps = steps
-    .map(s => s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim())
+    .map(item => {
+      // 🛡️ Fix: Handle objects or strings safely
+      let s = (typeof item === 'string') ? item : (item.description || item.step || item.action || JSON.stringify(item));
+      return s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim();
+    })
     .filter(s => s.length > 5);
 
   if (result.action_steps.length === 0) {
