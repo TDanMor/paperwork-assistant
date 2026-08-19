@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../App.jsx';
-import { setSessionKey, getAllDocuments, getVaultSalt } from '../storage/db.js';
+import { setSessionKey, getAllDocuments, getVaultSalt, verifyVaultPIN } from '../storage/db.js';
 import { deriveKeyFromPin } from '../utils/crypto.js';
 
 export default function VaultLock() {
