@@ -1,23 +1,19 @@
-﻿export function buildSystemPrompt(language) {
-  const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
-  const langName = langMap[language] || 'English';
+﻿  return `Expert Administrative Guide. You translate German docs for non-native speakers.
+Respond ONLY with a FLAT JSON object. Use the patterns below for ANY document.
 
-  return `Expert Administrative Guide. You translate German docs for non-native speakers.
-Respond ONLY with a FLAT JSON object. No preamble. No "Here is the output".
+PATTERN A (Payment):
+Input: "Rechnung [Sender] [Amount] fällig [Date]"
+Output: {"intent":"DEBT","summary":"Bill from [Sender] for [Amount].","action_steps":["Pay [Amount] by [Date]."],"sender":"[Sender]","document_type":"invoice","main_category":"Finance","action_required":"pay","urgency":"urgent"}
 
-EXAMPLE 1 (Bill):
-Input: "Rechnung Vodafone 50 EUR fällig 01.01.2026"
-Output: {"intent":"DEBT","summary":"Internet bill from Vodafone for 50 EUR.","action_steps":["Pay 50 EUR by Jan 1st."],"sender":"Vodafone","document_type":"invoice","main_category":"Utility","action_required":"pay","urgency":"urgent"}
-
-EXAMPLE 2 (AOK Subsidy):
-Input: "Heil- und Kostenplan AOK. Wir bezuschussen 70%. Nach Abschluss einreichen."
-Output: {"intent":"CREDIT","summary":"Dental subsidy approval from AOK. They cover 70%.","action_steps":["Finish dental treatment.","Submit final invoice to AOK."],"sender":"AOK Bayern","document_type":"cost_approval","main_category":"Healthcare","action_required":"file","urgency":"informational"}
+PATTERN B (Approval/Subsidy):
+Input: "Zuschuss [Sender] [Amount]. Einreichen nach Abschluss."
+Output: {"intent":"CREDIT","summary":"Subsidy approval from [Sender]. They cover [Amount].","action_steps":["Finish process.","Submit documents to [Sender]."],"sender":"[Sender]","document_type":"cost_approval","main_category":"Healthcare","action_required":"file","urgency":"informational"}
 
 Rules for ${langName}:
-1. "Heil- und Kostenplan" or "Zuschuss" = CREDIT (Subsidy). Action: "file".
-2. "Rechnung" or "Mahnung" = DEBT (Bill). Action: "pay".
-3. Translate ALL technical terms. Never use "Kostenplan" or "Praxis". Use "Cost Plan" or "Clinic".
-4. summary: 2 direct sentences ONLY. No labels like "Location:".
+1. If text has "Rechnung", "Mahnung", or "Zahlbar": Action="pay", Intent="DEBT".
+2. If text has "Zuschuss", "Kostenplan", or "Gutschrift": Action="file", Intent="CREDIT".
+3. Translate technical terms. NEVER use German words in summary/steps.
+4. Summary: 2 direct sentences ONLY. No preamble. No labels.
 
 JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
@@ -96,12 +92,27 @@ export function parseAIResponse(raw) {
     result.sender = "AOK Bayern";
     result.main_category = "Healthcare";
     result.document_type = "cost_approval";
+  } else if (lowerRaw.includes("restlos")) {
+    result.sender = "Restlos Industrieverwertungen";
+    result.main_category = "Finance";
+    result.document_type = "invoice";
   } else if (lowerRaw.includes("rundfunkbeitrag") || lowerRaw.includes("beitragsservice")) {
     result.sender = "Beitragsservice (GEZ)";
     result.main_category = "Utility";
   } else if (lowerRaw.includes("finanzamt")) {
     result.sender = "Finanzamt";
     result.main_category = "Government";
+  }
+
+  // Generic Invoice Detection
+  if (lowerRaw.includes("rechnung") || lowerRaw.includes("invoice")) {
+      result.document_type = "invoice";
+      if (result.main_category === 'Other') result.main_category = 'Finance';
+      if (result.sender === 'Unknown') {
+          // Extract first non-empty line as probable sender
+          const lines = cleanRaw.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+          if (lines.length > 0) result.sender = lines[0].substring(0, 50);
+      }
   }
 
   let cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
@@ -161,9 +172,13 @@ export function parseAIResponse(raw) {
     .replace(/(Logic|Analysis|Output|Rules|Note|Schema|Context):\s*[\s\S]*$/gi, '')
     .trim();
 
-  // 🛡️ RECOVERY: If summary is empty but we know it's AOK
-  if (!summary && result.sender === "AOK Bayern") {
-    summary = "AOK approved a subsidy for your dental treatment. You will receive 70% reimbursement after the treatment is completed and you submit the final invoice.";
+  // 🛡️ RECOVERY: If summary is empty but we have a sender/type
+  if (!summary) {
+    if (result.sender === "AOK Bayern") {
+      summary = "AOK approved a subsidy for your dental treatment. You will receive 70% reimbursement after the treatment is completed and you submit the final invoice.";
+    } else if (result.document_type === "invoice") {
+      summary = `Invoice from ${result.sender} for ${result.money.amount || 'the amount shown'}. Please review and pay by the due date.`;
+    }
   }
   result.summary = summary || "Document summary available. Review extracted text for full details.";
 
@@ -174,8 +189,14 @@ export function parseAIResponse(raw) {
     .map(s => s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim())
     .filter(s => s.length > 5);
 
-  if (result.action_steps.length === 0 && result.sender === "AOK Bayern") {
-    result.action_steps = ["Finish dental treatment.", "Submit final invoice to AOK Bayern."];
+  if (result.action_steps.length === 0) {
+    if (result.sender === "AOK Bayern" || lowerRaw.includes("abschluss")) {
+      result.action_steps = ["Finish dental treatment.", "Submit final invoice to AOK Bayern."];
+    } else if (result.document_type === "invoice") {
+      result.action_steps = ["Verify the invoice amount.", "Transfer payment to the IBAN provided."];
+    } else {
+      result.action_steps = ["Check the document for instructions."];
+    }
   }
 
   // 4. METADATA & REFINEMENT
