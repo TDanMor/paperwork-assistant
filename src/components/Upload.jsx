@@ -60,18 +60,13 @@ export default function Upload() {
 
             const sys = buildSystemPrompt(state.language);
 
-            // 🛡️ Token-Aware Slicing
-            let text = smartSliceOCR(ocrText, 5000);
-            const tokens = await getTokenCount(text);
-            const TOKEN_BUDGET = 1400;
-
-            if (tokens > TOKEN_BUDGET) {
-              text = smartSliceOCR(ocrText, 4000);
-            }
+            // 🛡️ DYNAMIC CONTEXT PRUNING:
+            // On a retry, we aggressively shrink the context to guarantee VRAM safety.
+            const budgetLimit = retryCount > 0 ? 1500 : 2800;
+            const text = smartSliceOCR(ocrText, budgetLimit);
 
             const user = buildUserMessage(text, state.language);
 
-            // Reverted assistant pre-fill as it violates WebLLM message order rules
             const raw  = await chat(sys, user);
             aiData = parseAIResponse(raw);
 

@@ -19,7 +19,10 @@ export async function loadModel(progressCallback) {
             progressCallback(Math.round(report.progress * 100), report.text || '');
           }
         },
-        context_window_size: 2048
+        // 🚀 STABILITY BUFFERS
+        context_window_size: 2048,
+        // Explicitly request high performance to avoid driver timeouts on Windows
+        adapterOpts: { powerPreference: "high-performance" }
       }
     );
     aiActivated = true; 
@@ -94,7 +97,7 @@ export async function chat(systemPrompt, userMessage) {
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
-      max_tokens: 450
+      max_tokens: 350
       // 🛡️ REMOVED: response_format: { type: 'json_object' }
       // This causes a Wasm BindingError in some browsers/WebLLM versions.
       // We rely on the system prompt and instruction-following for JSON.

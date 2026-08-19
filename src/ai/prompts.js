@@ -34,7 +34,7 @@ function mergeRanges(ranges) {
   return merged;
 }
 
-export function smartSliceOCR(text, maxChars = 3500) {
+export function smartSliceOCR(text, maxChars = 2800) {
   if (!text || text.length <= maxChars) return text || '';
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
@@ -42,7 +42,7 @@ export function smartSliceOCR(text, maxChars = 3500) {
   // Header & Tail are mandatory
   const ranges = [
     { start: 0, end: 1000 },
-    { start: totalLen - 500, end: totalLen }
+    { start: totalLen - 400, end: totalLen }
   ];
 
   const keywords = [
