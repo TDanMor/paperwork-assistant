@@ -50,7 +50,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
   const tailRange = { start: totalLen - 400, end: totalLen };
 
   // 🔍 UNIVERSAL GERMAN ADMIN ANCHORS
-  // Ordered roughly by criticality, but capped PER KEYWORD (not globally) so a
+  // Ordered roughly by criticality, but capped PER KEYWORD so a
   // frequently-repeated word (e.g. "frist") can't crowd out a rare-but-critical
   // one (e.g. "guthaben") that happens to sit later in the list.
   const keywords = [
@@ -62,7 +62,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
     'mitwirkung', 'termin', 'abschluss', 'iban', 'gesamtbetrag'
   ];
   const MAX_MATCHES_PER_KEYWORD = 1;
-  const MAX_TOTAL_ZONES = 14; // upper bound; the char-budget loop below is the real limiter
+  const MAX_TOTAL_ZONES = 14;
 
   const bodyText = sanitized.slice(900, -400);
   const bodyOffset = 900;
@@ -83,10 +83,9 @@ export function smartSliceOCR(text, maxChars = 2500) {
     }
   });
 
-  // 🛡️ Reserve the tail's budget FIRST so IBAN/footer/"Nach Abschluss" triggers
-  // can never be silently dropped by the front-loading loop below.
+  // 🛡️ Reserve the tail budget FIRST to guarantee IBAN/footer presence
   const tailChunk = sanitized.slice(tailRange.start, tailRange.end);
-  const separatorOverhead = 20; // room for the two "\n[...]\n" joins
+  const separatorOverhead = 20;
   const budgetForFront = Math.max(0, maxChars - tailChunk.length - separatorOverhead);
 
   const frontRanges = mergeRanges([headerRange, ...hotZoneRanges]);
@@ -113,14 +112,7 @@ export function parseAIResponse(raw, ocrText = '') {
   const result = getFallbackData();
   const lowerRaw = raw.toLowerCase();
 
-  // 🛡️ FACT-CHECK SOURCE: the deterministic overrides below must check the
-  // ORIGINAL document, not the AI's output. The system prompt instructs the
-  // model to translate every German term away ("Never use 'Bescheid',
-  // 'Mahnung'... Use 'Decision', 'Reminder'"), so checking `lowerRaw` for
-  // German keywords silently never fires once output language != German —
-  // i.e. for exactly the non-native-speaker users this app targets. `factText`
-  // is unbounded by the model's context window since it's plain JS string
-  // matching, so pass the FULL ocr text here, not just the sliced prompt zones.
+  // 🛡️ FACT-CHECK SOURCE: check original OCR, not translated AI output
   const factText = (ocrText || raw).toLowerCase();
 
   // 🛡️ UNIVERSAL SENDER SCANNER (Fallback Heuristics)
@@ -173,7 +165,7 @@ export function parseAIResponse(raw, ocrText = '') {
   const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'from']);
   if (rawSender && typeof rawSender === 'object') {
     result.sender = rawSender.organization || rawSender.company_name || rawSender.company || rawSender.name || Object.values(rawSender)[0] || result.sender;
-    // If the sender name matched the user's name (common AI mistake), try organization
+    // Common AI mistake fix
     if (result.sender.toLowerCase().includes("tony") && rawSender.organization) {
       result.sender = rawSender.organization;
     }
@@ -196,9 +188,9 @@ export function parseAIResponse(raw, ocrText = '') {
 
   // 🛡️ RECOVERY HEURISTICS
   if (!summary) {
-    if (lowerRaw.includes("rechnung") || lowerRaw.includes("invoice")) {
+    if (factText.includes("rechnung") || factText.includes("invoice")) {
       summary = `Invoice from ${result.sender}. Please review the amount and pay by the due date.`;
-    } else if (lowerRaw.includes("bescheid") || lowerRaw.includes("bewilligung")) {
+    } else if (factText.includes("bescheid") || factText.includes("bewilligung")) {
       summary = `Official decision or approval from ${result.sender}. Review the details and file for your records.`;
     }
   }
@@ -209,15 +201,14 @@ export function parseAIResponse(raw, ocrText = '') {
   let steps = Array.isArray(rawSteps) ? rawSteps : (rawSteps ? String(rawSteps).split(/(?<=[.!?])\s+/) : []);
   result.action_steps = steps
     .map(item => {
-      // 🛡️ Fix: Handle objects or strings safely
       let s = (typeof item === 'string') ? item : (item.description || item.step || item.action || JSON.stringify(item));
       return s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim();
     })
     .filter(s => s.length > 5);
 
   if (result.action_steps.length === 0) {
-    if (lowerRaw.includes("rechnung")) result.action_steps = ["Verify invoice details.", "Pay the total amount to the provided IBAN."];
-    else if (lowerRaw.includes("abschluss")) result.action_steps = ["Finish the current treatment or process.", "Submit final documentation to the sender."];
+    if (factText.includes("rechnung")) result.action_steps = ["Verify invoice details.", "Pay the total amount to the provided IBAN."];
+    else if (factText.includes("abschluss")) result.action_steps = ["Finish treatment.", "Submit final documentation to the sender."];
     else result.action_steps = ["Check the document for instructions."];
   }
 
@@ -245,8 +236,6 @@ export function parseAIResponse(raw, ocrText = '') {
     result.action_required = 'file';
     if (result.main_category === 'Other') result.main_category = 'Healthcare';
   }
-  // "bewilligung" alone is too generic (Jobcenter/BAföG/Wohngeld approvals aren't
-  // Healthcare) — only infer CREDIT, don't force the category.
   if (factText.includes('bewilligung') && !factText.includes('rückforderung')) {
     result.intent = 'CREDIT';
     result.action_required = 'file';
@@ -261,7 +250,7 @@ export function parseAIResponse(raw, ocrText = '') {
     if (result.main_category === 'Other') result.main_category = 'Finance';
   }
 
-  // 🔴 CRITICAL enforcement overrides — days, not weeks, to act
+  // 🔴 CRITICAL enforcement overrides
   const criticalKeywords = ['vollstreckungsbescheid', 'mahnbescheid', 'pfändung', 'pfüb', 'räumungsklage', 'gerichtsvollzieher'];
   if (criticalKeywords.some(k => factText.includes(k))) {
     result.urgency = 'overdue';
@@ -272,7 +261,7 @@ export function parseAIResponse(raw, ocrText = '') {
     result.urgency = 'overdue';
   }
 
-  // Jobcenter high-risk documents
+  // Jobcenter / Benefits
   if (factText.includes('aufhebungsbescheid')) {
     result.urgency = 'overdue';
     result.action_required = 'respond';
@@ -281,12 +270,9 @@ export function parseAIResponse(raw, ocrText = '') {
     result.urgency = 'urgent';
     if (result.action_required === 'none') result.action_required = 'respond';
   }
-  if (factText.includes('kooperationsplan')) {
-    result.action_required = 'respond';
-  }
+  if (factText.includes('kooperationsplan')) result.action_required = 'respond';
 
-  // Refund vs. repayment-demand disambiguation (Guthaben looks similar to
-  // Rückforderung but means the opposite direction of cash flow)
+  // Refund vs Repayment
   if (factText.includes('rückforderung')) {
     result.intent = 'DEBT';
     result.action_required = 'pay';
@@ -294,13 +280,12 @@ export function parseAIResponse(raw, ocrText = '') {
     result.intent = 'CREDIT';
   }
 
-  // Nebenkostenabrechnung is ambiguous by default — only resolve if a clear signal is present
+  // Nebenkosten
   if (factText.includes('nebenkostenabrechnung') || factText.includes('betriebskostenabrechnung')) {
-    if (factText.includes('guthaben')) {
-      result.intent = 'CREDIT';
-    } else if (factText.includes('nachzahlung')) {
-      result.intent = 'DEBT';
-      result.action_required = 'pay';
+    if (factText.includes('guthaben')) result.intent = 'CREDIT';
+    else if (factText.includes('nachzahlung')) {
+        result.intent = 'DEBT';
+        result.action_required = 'pay';
     }
   }
 
