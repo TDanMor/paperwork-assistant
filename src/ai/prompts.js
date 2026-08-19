@@ -2,79 +2,60 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `You are a Direct Logistics Guide. Your job is to analyze documents in any language and explain them simply to a non-native speaker in ${langName}.
+  return `Analyze this document. Output ONLY valid JSON. All values in ${langName}.
+Keys MUST be: "sender", "document_type", "dates", "money", "main_category", "action_required", "urgency", "summary", "action_steps".
+If a fact is missing, use null. No prose.`;
+}
 
-CRITICAL PERSONA:
-- Be direct, clear, and simple.
-- Explain the document's purpose immediately.
-- INTENT CHECK: Differentiate between a DEBT (payment required), a CREDIT (you receive money), or an ACTION (respond, file, attend).
-- Highlight Total Amount, Location, and Deadlines in ${langName}.
-
-ALLOWED LISTS (Use these exact strings for keys):
-- document_type: "invoice", "notice", "contract", "government_letter", "employment", "healthcare", "bank", "appointment", "fine", "other"
-- main_category: "Finance", "Housing", "Government", "Employment", "Insurance", "Healthcare", "Utility", "Other"
-- action_required: "pay", "respond", "file", "attend", "renew", "none"
-
-CRITICAL: You MUST write the "summary" and "action_steps" values entirely in ${langName}. Translate everything.
-
-JSON Schema:
-{
-  "sender": "Exact Company Name",
-  "document_type": "choose from allowed list",
-  "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
-  "money": {"amount": 0.00, "currency": "EUR"},
-  "main_category": "choose from allowed list",
-  "sub_category": "Specific type (e.g. Tax, Rent, Salary, Fine)",
-  "action_required": "choose from allowed list",
-  "urgency": "overdue|urgent|upcoming|informational",
-  "summary": "Explain exactly what this is and what to do in ${langName}.",
-  "action_steps": "1. [Verb] step one. 2. [Verb] step two in ${langName}."
-}`;
+function sanitizeForPrompt(text) {
+  return text
+    .replace(/ignore (all |previous |above )?instructions?/gi, '[REDACTED]')
+    .replace(/you are (now |a )?assistant/gi, '[REDACTED]')
+    .replace(/system prompt/gi, '[REDACTED]')
+    .replace(/<\/document>/gi, ''); // Prevent tag escaping
 }
 
 export function smartSliceOCR(text, maxChars = 2300) {
   if (!text || text.length <= maxChars) return text || '';
 
-  const header = text.slice(0, 900);
-  const remaining = text.slice(900);
+  const sanitized = sanitizeForPrompt(text);
+  const header = sanitized.slice(0, 800);
+  const tail = sanitized.slice(-400);
+  const body = sanitized.slice(800, -400);
 
   const keywords = [
-    // Finance/Logistics
-    'address', 'straße', 'strasse', 'pickup', 'abholung', 'appointment', 'termin',
-    'due', 'fällig', 'iban', 'total', 'betrag', 'deadline', 'gesamt', 'summe',
-    'transfer', 'überweisung', 'rechnung', 'invoice',
-    // Government/Tax
-    'bescheid', 'finanzamt', 'steuer', 'bürgergeld', 'bußgeld', 'ordnungswidrigkeit',
-    'rundfunkbeitrag', 'kindergeld', 'sozialversicherung',
-    // Housing
-    'mietvertrag', 'nebenkosten', 'kündigung', 'betriebskosten', 'hausverwaltung',
-    'vermieter', 'mietanpassung',
-    // Employment/Insurance
-    'lohnabrechnung', 'gehalt', 'arbeitsvertrag', 'urlaub', 'police', 'versicherung',
-    'beitragsrechnung', 'schadenmeldung', 'festzuschuss', 'zuschuss'
+    // Multi-language anchors (DE, EN, ES, FR, RO)
+    'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
+    'due', 'fällig', 'deadline', 'frist', 'scadență', 'echeance', 'vencimiento',
+    'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
+    'pickup', 'abholung', 'appointment', 'termin', 'programare', 'cita',
+    'miet', 'rent', 'chirie', 'alquiler', 'loyer',
+    'fine', 'bußgeld', 'amendă', 'multa', 'amende'
   ];
 
   const segments = [];
   keywords.forEach(kw => {
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(remaining)) !== null && segments.length < 6) {
-      const start = Math.max(0, match.index - 120);
-      const end = Math.min(remaining.length, match.index + 230);
-      segments.push(remaining.slice(start, end));
-      regex.lastIndex += 250;
+    // Limit to 4 windows to stay within budget
+    while ((match = regex.exec(body)) !== null && segments.length < 4) {
+      const start = Math.max(0, match.index - 100);
+      const end = Math.min(body.length, match.index + 200);
+      segments.push(body.slice(start, end));
+      regex.lastIndex += 300;
     }
   });
 
-  const body = segments.join('\n[...]\n');
-  const result = `${header}\n[... SECTION BREAK ...]\n${body}`;
-
+  const result = `${header}\n[...]\n${segments.join('\n[...]\n')}\n[...]\n${tail}`;
   return result.slice(0, maxChars);
 }
 
-export function buildUserMessage(ocrText) {
-  const text = smartSliceOCR(ocrText, 2500);
-  return `Act as a guide for a non-native speaker. Analyze this text. Focus on TOTAL AMOUNT, IBAN, and EXACT PICKUP LOGISTICS. Output ONLY the JSON:\n\n${text}`;
+export function buildUserMessage(ocrText, language) {
+  const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
+  const langName = langMap[language] || 'English';
+  const text = smartSliceOCR(ocrText, 2300);
+
+  return `<document>\n${text}\n</document>\n\nAnalyze the document above. Respond ONLY in ${langName} using the JSON schema.`;
 }
 
 export function parseAIResponse(raw) {
@@ -87,7 +68,7 @@ export function parseAIResponse(raw) {
   const result = getFallbackData();
   const cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
-  // 1. BASELINE EXTRACTION (Aggressive Fuzzy)
+  // 1. baseline extraction from plain text (Fuzzy)
   const getFuzzy = (regex) => {
     const match = cleanRaw.match(regex);
     return match ? match[1].trim() : null;
@@ -106,7 +87,7 @@ export function parseAIResponse(raw) {
     result.main_category = 'Finance';
   }
 
-  // 2. JSON EXTRACTION
+  // 2. JSON extraction
   let jsonParsed = null;
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);

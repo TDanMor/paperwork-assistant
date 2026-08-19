@@ -27,6 +27,7 @@ export default function NavBar() {
           </button>
         ))}
       </div>
+      <span className="navbar-version">v:{__APP_VERSION__}</span>
     </nav>
   );
 }

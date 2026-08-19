@@ -84,8 +84,8 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Change to space-between to handle logo, center-links, and version */
   padding: 0 1.5rem;
-  gap: 2rem;
   box-shadow: var(--shadow-sm);
 }
 .navbar-brand {
@@ -94,8 +94,22 @@ body {
   color: var(--accent);
   letter-spacing: -.02em;
   white-space: nowrap;
+  flex: 0 0 160px; /* Give logo some width to balance layout */
 }
-.navbar-links { display: flex; gap: .25rem; }
+.navbar-links {
+  display: flex;
+  gap: .25rem;
+  justify-content: center; /* Center links in their container */
+  flex: 1; /* Allow container to grow and center its content */
+}
+.navbar-version {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-family: monospace;
+  flex: 0 0 160px; /* Balance with brand width */
+  text-align: right;
+  opacity: 0.7;
+}
 .nav-btn {
   display: flex;
   align-items: center;

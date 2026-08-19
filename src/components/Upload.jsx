@@ -58,9 +58,12 @@ export default function Upload() {
           try {
             updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
             const sys  = buildSystemPrompt(state.language);
-            const user = buildUserMessage(ocrText);
-            const raw  = await chat(sys, user);
-            aiData = parseAIResponse(raw);
+            const user = buildUserMessage(ocrText, state.language);
+
+            // 🛡️ Claude Audit Implementation: Pre-fill for JSON-first generation
+            const raw  = await chat(sys, user, '{"sender":');
+            aiData = parseAIResponse(raw.startsWith('{') ? raw : '{"sender":' + raw);
+
             wasAiSuccess = true;
             break;
           } catch (aiErr) {
