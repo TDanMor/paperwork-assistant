@@ -2,13 +2,19 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Expert Doc Analyzer. Target: ${langName}.
-Rules:
-1. Intent: DEBT(User pays), CREDIT(User receives/Subsidy), ACTION(User responds).
-2. Summary: 2 simple sentences. Identify document (e.g. AOK dental subsidy). Detail timing/conditions (e.g. "After treatment, submit invoice").
-3. Logic: Heil- und Kostenplan is CREDIT, not DEBT.
-4. Output: Valid FLAT JSON only. Translate values to ${langName}. Keys in English.
-Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
+  return `Expert Administrative Guide. Language: ${langName}.
+Instructions:
+1. Explain doc purpose simply.
+2. Identify ACTION: Pay X, Attend Y, or Submit Z after [Condition].
+3. If "Kostenplan" or "Zuschuss": It is a BENEFIT/SUBSIDY (User receives money), not a bill.
+4. If "Nach Abschluss": User must act ONLY after treatment/event is finished.
+
+Field Content Rules:
+- summary: 2 direct sentences. NO "Logic:", NO "Output:", NO chatter.
+- action_steps: Concrete steps (e.g. "1. Finish treatment. 2. Send invoice").
+- sender: Exact company/office name.
+
+JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
 
 function sanitizeForPrompt(text) {
@@ -140,10 +146,23 @@ export function parseAIResponse(raw) {
   }
 
   const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
-  result.summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : rawSummary;
+  let summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : String(rawSummary);
+
+  // 🧹 CLEANUP: Strip AI instructions leak (Logic:, Output:, etc)
+  summary = summary
+    .replace(/(Logic|Analysis|Output|Rules|Note|Schema):\s*[\s\S]*$/gi, '')
+    .replace(/Here is the (output|json)[\s\S]*?\{/gi, '')
+    .trim();
+
+  result.summary = summary || "No summary available.";
 
   const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i) || "Check the document for instructions.";
-  result.action_steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : rawSteps;
+  let steps = Array.isArray(rawSteps) ? rawSteps.join(' ') : String(rawSteps);
+  if (steps.toLowerCase().includes("check the document")) {
+     // If AI failed, try a last-ditch fuzzy extraction for common "Nach Abschluss" pattern
+     if (cleanRaw.toLowerCase().includes("abschluss")) steps = "1. Finish the treatment or process. 2. Submit the resulting documents/invoice to the sender.";
+  }
+  result.action_steps = steps;
 
   result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
   result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (cleanRaw.toLowerCase().includes('rechnung') ? 'invoice' : result.document_type);
