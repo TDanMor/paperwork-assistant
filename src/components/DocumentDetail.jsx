@@ -1,6 +1,7 @@
 ﻿import React, { useContext, useState, useEffect } from 'react';
 import { AppContext }      from '../App.jsx';
 import { getDocumentById, deleteDocument, updateDocument } from '../storage/db.js';
+import { generateGoogleCalendarUrl } from '../utils/calendar.js';
 import { t } from '../i18n/index.js';
 
 export default function DocumentDetail({ docId }) {
@@ -120,6 +121,17 @@ export default function DocumentDetail({ docId }) {
               <div>
                 <h2 style={{ marginBottom: '0.25rem', fontSize: '1rem' }}>{doc.is_done ? '✅ Marked as Done' : '⏳ Pending Action'}</h2>
                 {doc.is_done && doc.done_note && <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Note: {doc.done_note}</p>}
+                {!doc.is_done && (doc.dates?.due_date || doc.dates?.appointment_date) && (
+                  <a
+                    href={generateGoogleCalendarUrl(doc)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', fontSize: '0.8rem' }}
+                  >
+                    📅 Add to Google Calendar
+                  </a>
+                )}
               </div>
               <button className={`btn ${doc.is_done ? 'btn-outline' : 'btn-primary'}`} onClick={handleToggleDone}>
                 {doc.is_done ? 'Mark as Pending' : 'Mark as Done'}
