@@ -4,33 +4,31 @@
 
   return `You are a Direct Logistics Guide. Your job is to analyze documents in any language and explain them simply to a non-native speaker in ${langName}.
 
-CRITICAL: You MUST write the "summary" and "action_steps" values entirely in ${langName}.
-DO NOT use German or the document's original language in your response. Translate everything into ${langName}.
-
 CRITICAL PERSONA:
 - Be direct, clear, and simple.
 - Explain the document's purpose immediately.
-- Translate ALL information from the document's original language into ${langName}.
+- INTENT CHECK: Differentiate between a DEBT (payment required), a CREDIT (you receive money), or an ACTION (respond, file, attend).
 - Highlight Total Amount, Location, and Deadlines in ${langName}.
 
-CRITICAL RULES:
-1. Output ONLY valid JSON.
-2. NO conversational filler.
-3. START with "{" and END with "}".
-4. All JSON keys MUST remain in English.
+ALLOWED LISTS (Use these exact strings for keys):
+- document_type: "invoice", "notice", "contract", "government_letter", "employment", "healthcare", "bank", "appointment", "fine", "other"
+- main_category: "Finance", "Housing", "Government", "Employment", "Insurance", "Healthcare", "Utility", "Other"
+- action_required: "pay", "respond", "file", "attend", "renew", "none"
+
+CRITICAL: You MUST write the "summary" and "action_steps" values entirely in ${langName}. Translate everything.
 
 JSON Schema:
 {
   "sender": "Exact Company Name",
-  "document_type": "invoice|insurance|government|healthcare|bank|appointment|tax|contract|letter|other",
+  "document_type": "choose from allowed list",
   "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
   "money": {"amount": 0.00, "currency": "EUR"},
-  "main_category": "Insurance|Finance|Government|Healthcare|Housing|Employment|Utility|Other",
-  "sub_category": "Car|House|Tax|Bank|Visa|University|Internet|Electricity|Water|Other",
-  "action_required": "pay|renew|attend|respond|file|none",
+  "main_category": "choose from allowed list",
+  "sub_category": "Specific type (e.g. Tax, Rent, Salary, Fine)",
+  "action_required": "choose from allowed list",
   "urgency": "overdue|urgent|upcoming|informational",
-  "summary": "Write the explanation here ENTIRELY in ${langName}.",
-  "action_steps": "Write numbered steps here ENTIRELY in ${langName}."
+  "summary": "Explain exactly what this is and what to do in ${langName}.",
+  "action_steps": "1. [Verb] step one. 2. [Verb] step two in ${langName}."
 }`;
 }
 
@@ -41,10 +39,19 @@ export function smartSliceOCR(text, maxChars = 2300) {
   const remaining = text.slice(900);
 
   const keywords = [
+    // Finance/Logistics
     'address', 'straße', 'strasse', 'pickup', 'abholung', 'appointment', 'termin',
-    'due', 'fällig', 'iban', 'total', 'betrag', 'deadline', 'location', 'ort',
-    'opening', 'öffnungszeiten', 'window', 'zeitraum', 'gesamt', 'summe',
-    'abholschein', 'rechnungsnummer', 'transfer', 'überweisung', 'rechnung'
+    'due', 'fällig', 'iban', 'total', 'betrag', 'deadline', 'gesamt', 'summe',
+    'transfer', 'überweisung', 'rechnung', 'invoice',
+    // Government/Tax
+    'bescheid', 'finanzamt', 'steuer', 'bürgergeld', 'bußgeld', 'ordnungswidrigkeit',
+    'rundfunkbeitrag', 'kindergeld', 'sozialversicherung',
+    // Housing
+    'mietvertrag', 'nebenkosten', 'kündigung', 'betriebskosten', 'hausverwaltung',
+    'vermieter', 'mietanpassung',
+    // Employment/Insurance
+    'lohnabrechnung', 'gehalt', 'arbeitsvertrag', 'urlaub', 'police', 'versicherung',
+    'beitragsrechnung', 'schadenmeldung', 'festzuschuss', 'zuschuss'
   ];
 
   const segments = [];
