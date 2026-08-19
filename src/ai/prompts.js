@@ -103,7 +103,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
 
   const tailChunk = sanitized.slice(tailRange.start, tailRange.end);
   const budgetForFront = Math.max(0, maxChars - tailChunk.length - 20);
-  const frontRanges = mergeRanges([headerRange, ...hotZoneZoneRanges || hotZoneRanges]);
+  const frontRanges = mergeRanges([headerRange, ...hotZoneRanges]);
   let frontResult = "";
   for (const range of frontRanges) {
     const chunk = sanitized.slice(range.start, range.end);
