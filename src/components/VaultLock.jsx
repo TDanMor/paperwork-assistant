@@ -11,7 +11,7 @@ export default function VaultLock() {
   const handleUnlock = async (e) => {
     e.preventDefault();
     if (!/^\d{6}$/.test(pin)) {
-      alert('PIN must be exactly 6 digits.');
+      alert(t('vault.pin_error'));
       return;
     }
 
@@ -26,7 +26,7 @@ export default function VaultLock() {
       // 3. Verify PIN with Canary
       const isValid = await verifyVaultPIN(key);
       if (!isValid) {
-        alert("Incorrect PIN. Please try again.");
+        alert(t('vault.incorrect_pin'));
         return;
       }
 
@@ -41,14 +41,14 @@ export default function VaultLock() {
       dispatch({ type: 'SET_DOCUMENTS', documents: docs });
     } catch (err) {
       console.error("Unlock failed:", err);
-      alert(`System error during unlock: ${err.message}`);
+      alert(`${t('vault.system_error')}${err.message}`);
     } finally {
       setIsUnlocking(false);
     }
   };
 
   const handleClearData = async () => {
-    if (window.confirm("CRITICAL: This will permanently delete all your documents and reset the vault. Only do this if you cannot unlock your vault. Continue?")) {
+    if (window.confirm(t('vault.reset_confirm'))) {
       const { openDB } = await import('idb');
       await indexedDB.deleteDatabase('paperwork-assistant');
       window.location.reload();
@@ -58,8 +58,8 @@ export default function VaultLock() {
   return (
     <div className="status-card" style={{ maxWidth: '400px', margin: '4rem auto' }}>
       <div className="result-card__icon">🔐</div>
-      <h2>Personal Vault Locked</h2>
-      <p className="muted" style={{ fontSize: '0.85rem' }}>Enter your 6-digit PIN to decrypt your data. This PIN is never saved and ensures your privacy even if your device is lost.</p>
+      <h2>{t('vault.title')}</h2>
+      <p className="muted" style={{ fontSize: '0.85rem' }}>{t('vault.description')}</p>
 
       <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
         <input
@@ -80,7 +80,7 @@ export default function VaultLock() {
           }}
         />
         <button className="btn btn-primary" type="submit" disabled={isUnlocking || pin.length < 6}>
-          {isUnlocking ? 'Decrypting Vault...' : 'Unlock Vault'}
+          {isUnlocking ? t('vault.decrypting') : t('vault.unlock')}
         </button>
       </form>
 
@@ -89,7 +89,7 @@ export default function VaultLock() {
         className="btn btn-sm"
         style={{ marginTop: '2rem', color: 'var(--c-overdue)', fontSize: '0.7rem', opacity: 0.6 }}
       >
-        Trouble unlocking? Reset local vault
+        {t('vault.reset_label')}
       </button>
     </div>
   );

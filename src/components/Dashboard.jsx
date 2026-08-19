@@ -30,14 +30,19 @@ export default function Dashboard() {
   const isEmpty = totalActive === 0 && documents.length === 0;
 
   // Generate an intuitive, human-friendly summary sentence
-  let summaryText = "Your desk is completely clean! No pending paperwork requires your attention.";
+  let summaryText = t('dashboard.clean_desk');
   if (totalActive > 0) {
     const parts = [];
-    if (grouped.overdue.length > 0) parts.push(`${grouped.overdue.length} needing immediate attention`);
-    if (grouped.urgent.length > 0) parts.push(`${grouped.urgent.length} due this week`);
-    if (grouped.upcoming.length > 0) parts.push(`${grouped.upcoming.length} on your radar`);
-    if (grouped.informational.length > 0) parts.push(`${grouped.informational.length} for your records`);
-    summaryText = `You have ${totalActive} active document${totalActive === 1 ? '' : 's'}: ${parts.join(', ')}.`;
+    if (grouped.overdue.length > 0) parts.push(t('dashboard.summary_overdue').replace('{count}', grouped.overdue.length));
+    if (grouped.urgent.length > 0) parts.push(t('dashboard.summary_urgent').replace('{count}', grouped.urgent.length));
+    if (grouped.upcoming.length > 0) parts.push(t('dashboard.summary_upcoming').replace('{count}', grouped.upcoming.length));
+    if (grouped.informational.length > 0) parts.push(t('dashboard.summary_informational').replace('{count}', grouped.informational.length));
+
+    summaryText = t('dashboard.summary_prefix')
+      .replace('{total}', totalActive)
+      .replace('{suffix}', totalActive === 1 ? '' : 's')
+      .replace('{plural_suffix}', totalActive === 1 ? '' : 'e')
+      + ' ' + parts.join(', ') + '.';
   }
 
   return (
@@ -50,7 +55,7 @@ export default function Dashboard() {
       <div style={{ padding: '1rem 1.25rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
         <span style={{ fontSize: '1.5rem' }}>💡</span>
         <div>
-          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.15rem 0' }}>Workspace Briefing</h2>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.15rem 0' }}>{t('dashboard.workspace_briefing')}</h2>
           <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>{summaryText}</p>
         </div>
       </div>
@@ -83,7 +88,7 @@ export default function Dashboard() {
                 {isOpen && (
                   <div className="kanban-cards" style={{ marginTop: '0.75rem' }}>
                     {count === 0 ? (
-                      <p className="muted" style={{ fontSize: '0.80rem', textAlign: 'center', padding: '1.5rem 0' }}>All clear in this category</p>
+                      <p className="muted" style={{ fontSize: '0.80rem', textAlign: 'center', padding: '1.5rem 0' }}>{t('dashboard.all_clear')}</p>
                     ) : (
                       grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)
                     )}

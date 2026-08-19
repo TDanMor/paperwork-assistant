@@ -11,9 +11,9 @@ export default function Settings() {
   const isLite = activeModelId === MODELS.lite;
 
   const handleModeChange = (mode) => {
-    if (window.confirm("Changing AI mode requires re-loading the model (~1-2 GB). Continue?")) {
+    if (window.confirm(t('settings.ai_mode_confirm'))) {
         setActiveModel(mode);
-        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'Switched mode. Ready to reload.' });
+        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.ai_switched_msg') });
     }
   };
   const [exportPassword, setExportPassword] = useState('');
@@ -22,7 +22,7 @@ export default function Settings() {
   const [restoreStatus, setRestoreStatus]   = useState('');
 
   async function handleLoadModel() {
-    dispatch({ type:'SET_MODEL_STATUS', status:'loading', progress:0, message:'Starting…' });
+    dispatch({ type:'SET_MODEL_STATUS', status:'loading', progress:0, message:t('model.starting') });
     try {
       await loadModel((pct, msg) =>
         dispatch({ type:'SET_MODEL_STATUS', status:'loading', progress:pct, message:msg })
@@ -48,7 +48,7 @@ export default function Settings() {
   }
 
   async function handleExportBackup() {
-    if (exportPassword.length < 10) { alert('Password must be at least 10 chars.'); return; }
+    if (exportPassword.length < 10) { alert(t('settings.backup_pass_error')); return; }
     try {
       const docs = await getAllDocuments();
       const serializedDocs = await Promise.all(docs.map(async doc => {
@@ -82,7 +82,7 @@ export default function Settings() {
       a.click();
       URL.revokeObjectURL(url);
       setExportPassword('');
-      alert('Encrypted backup downloaded successfully!');
+      alert(t('settings.backup_success'));
     } catch (err) { alert('Export failed: ' + err.message); }
   }
 
@@ -90,7 +90,7 @@ export default function Settings() {
     e.preventDefault();
     if (!restoreFile || !restorePassword) return;
     try {
-      setRestoreStatus('Decrypting...');
+      setRestoreStatus(t('settings.backup_decrypting'));
       const bytes = new Uint8Array(await restoreFile.arrayBuffer());
       const salt = bytes.slice(0, 16);
       const iv = bytes.slice(16, 28);
@@ -110,10 +110,10 @@ export default function Settings() {
       }
 
       dispatch({ type: 'SET_DOCUMENTS', documents: await getAllDocuments() });
-      setRestoreStatus('✅ Restored successfully!');
+      setRestoreStatus(t('settings.backup_restore_success'));
       setRestoreFile(null);
       setRestorePassword('');
-    } catch (err) { setRestoreStatus('❌ Decryption failed. Incorrect password.'); }
+    } catch (err) { setRestoreStatus(t('settings.backup_decrypt_error')); }
   }
 
   async function handleResetWorkspace() {
@@ -122,7 +122,7 @@ export default function Settings() {
     dispatch({ type: 'SET_DOCUMENTS', documents: [] });
     localStorage.removeItem('pa_lang');
     localStorage.removeItem('ai_model_cached');
-    alert('Workspace cleared.');
+    alert(t('settings.reset_done'));
     setConfirmText('');
   }
 
@@ -132,8 +132,8 @@ export default function Settings() {
 
       {/* Stable Multilingual Selector */}
       <section className="settings-card">
-        <h2>🌐 Interface & AI Language</h2>
-        <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>Choose your preferred language for summaries, insights, and AI analysis.</p>
+        <h2>🌐 {t('settings.language')}</h2>
+        <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>{t('settings.language_subtitle')}</p>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
           <button className={`btn ${state.language === 'en' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'en' })}>🇬🇧 English</button>
           <button className={`btn ${state.language === 'de' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'de' })}>🇩🇪 Deutsch</button>
@@ -153,9 +153,9 @@ export default function Settings() {
             onClick={() => handleModeChange('pro')}
             style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
           >
-            <span style={{ fontSize: '1.1rem' }}>🏆 Pro Mode</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Llama 3.2 3B (Best Accuracy)</span>
-            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>Needs 4GB+ VRAM</span>
+            <span style={{ fontSize: '1.1rem' }}>{t('settings.ai_pro_title')}</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>{t('settings.ai_pro_desc')}</span>
+            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>{t('settings.ai_pro_vram')}</span>
           </button>
 
           <button
@@ -163,9 +163,9 @@ export default function Settings() {
             onClick={() => handleModeChange('lite')}
             style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
           >
-            <span style={{ fontSize: '1.1rem' }}>⚡ Lite Mode</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>Llama 3.2 1B (High Stability)</span>
-            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>Perfect for Phones & Tablets</span>
+            <span style={{ fontSize: '1.1rem' }}>{t('settings.ai_lite_title')}</span>
+            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>{t('settings.ai_lite_desc')}</span>
+            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>{t('settings.ai_lite_vram')}</span>
           </button>
         </div>
 
@@ -173,28 +173,28 @@ export default function Settings() {
         <p className="muted">{t('settings.model_status')}: <strong>{state.modelStatus}</strong>{state.modelStatus === 'loading' && ` — ${state.modelProgress}%`}{state.modelStatus === 'ready' && ' ✅'}</p>
         {state.modelStatus !== 'ready' && (
           <button className="btn btn-primary" onClick={handleLoadModel} disabled={state.modelStatus === 'loading'}>
-            {state.modelStatus === 'loading' ? `Loading… ${state.modelProgress}%` : t('model.load_button')}
+            {state.modelStatus === 'loading' ? `${t('detail.loading')} ${state.modelProgress}%` : t('model.load_button')}
           </button>
         )}
       </section>
 
       {/* Backup */}
       <section className="settings-card" style={{ borderLeft: '4px solid var(--accent)' }}>
-        <h2>🔒 Encrypted Backup & Restore</h2>
+        <h2>{t('settings.backup_title')}</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
           <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-            <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>Create Encrypted Backup</h3>
+            <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>{t('settings.backup_create_title')}</h3>
             <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-              <input type="password" placeholder="Password (min 10 chars)" value={exportPassword} onChange={e => setExportPassword(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', width: '220px' }} />
-              <button className="btn btn-primary btn-sm" disabled={exportPassword.length < 10} onClick={handleExportBackup}>🔐 Download Backup</button>
+              <input type="password" placeholder={t('settings.backup_pass_placeholder')} value={exportPassword} onChange={e => setExportPassword(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', width: '220px' }} />
+              <button className="btn btn-primary btn-sm" disabled={exportPassword.length < 10} onClick={handleExportBackup}>{t('settings.backup_download_btn')}</button>
             </div>
           </div>
           <div style={{ padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
-            <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>Restore Backup</h3>
+            <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem' }}>{t('settings.backup_restore_title')}</h3>
             <form onSubmit={handleRestoreBackup} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: '350px' }}>
               <input type="file" accept=".pa,.json" onChange={e => setRestoreFile(e.target.files[0])} style={{ fontSize: '0.85rem' }} />
-              <input type="password" placeholder="Backup password" value={restorePassword} onChange={e => setRestorePassword(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem' }} />
-              <button type="submit" className="btn btn-outline btn-sm" disabled={!restoreFile || !restorePassword}>🔓 Restore</button>
+              <input type="password" placeholder={t('settings.backup_restore_pass_placeholder')} value={restorePassword} onChange={e => setRestorePassword(e.target.value)} style={{ padding: '0.45rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem' }} />
+              <button type="submit" className="btn btn-outline btn-sm" disabled={!restoreFile || !restorePassword}>{t('settings.backup_restore_btn')}</button>
             </form>
             {restoreStatus && <p style={{ fontSize: '0.85rem', marginTop: '0.5rem', fontWeight: 600 }}>{restoreStatus}</p>}
           </div>
@@ -203,11 +203,11 @@ export default function Settings() {
 
       {/* Reset */}
       <section className="settings-card settings-card--danger">
-        <h2>⚠️ Reset Local Workspace</h2>
+        <h2>{t('settings.reset_title')}</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Type confirmation: <span style={{ fontFamily: 'monospace', color: 'var(--c-overdue)' }}>CLEAR LOCAL WORKSPACE</span></label>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('settings.reset_confirm_label')} <span style={{ fontFamily: 'monospace', color: 'var(--c-overdue)' }}>CLEAR LOCAL WORKSPACE</span></label>
           <input type="text" value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder="CLEAR LOCAL WORKSPACE" style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', maxWidth: '320px' }} />
-          <button className="btn btn-danger" disabled={confirmText !== 'CLEAR LOCAL WORKSPACE'} onClick={handleResetWorkspace}>🗑️ Delete Local Workspace</button>
+          <button className="btn btn-danger" disabled={confirmText !== 'CLEAR LOCAL WORKSPACE'} onClick={handleResetWorkspace}>{t('settings.reset_btn')}</button>
         </div>
       </section>
     </div>

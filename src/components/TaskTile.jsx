@@ -27,7 +27,7 @@ export default function TaskTile({ doc }) {
     >
       <div className="tile__header">
         <span className="tile__icon">{icon}</span>
-        <span className="tile__sender">{doc.sender || 'Unknown'}</span>
+        <span className="tile__sender">{doc.sender || t('detail.unknown_sender')}</span>
         <span className="tile__cat" style={{ color: style.label }}>
           {t(`categories.${doc.main_category}`) || doc.main_category}
         </span>
@@ -41,7 +41,7 @@ export default function TaskTile({ doc }) {
           {doc.money?.amount != null && <span style={{ color: style.label, fontWeight: 600 }}>💰 {doc.money.amount} {doc.money.currency || ''}</span>}
         </div>
         <span style={{ fontSize: '0.7rem', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', backgroundColor: 'var(--surface)', border: `1px solid ${style.border}`, color: style.label, whiteSpace: 'nowrap' }}>
-          ⏳ Pending Action
+          ⏳ {t('detail.pending')}
         </span>
       </div>
     </div>

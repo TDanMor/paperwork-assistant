@@ -3,15 +3,12 @@ import { AppContext } from '../App.jsx';
 import { t } from '../i18n/index.js';
 
 const MAIN_CATS = ['Insurance','Finance','Government','Healthcare','Housing','Employment','Utility','Other'];
-const MONTH_NAMES = {
-  en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
-  de: ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'],
-};
+const MONTH_KEYS = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 
 export default function FolderView() {
   const { state, dispatch } = useContext(AppContext);
-  const { documents, language } = state;
-  const monthNames = MONTH_NAMES[language] || MONTH_NAMES.en;
+  const { documents } = state;
+  const monthNames = MONTH_KEYS.map(m => t(`months.${m}`));
 
   const [path, setPath] = useState({ cat: null, sub: null, year: null, month: null });
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,11 +36,11 @@ export default function FolderView() {
     return (
       <div className="page-container">
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <h1 className="page-title" style={{ flex: 1 }}>🔍 Search Results</h1>
-          <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} autoFocus />
+          <h1 className="page-title" style={{ flex: 1 }}>🔍 {t('folders.search_results')}</h1>
+          <input type="text" placeholder={`${t('folders.search_placeholder')}...`} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} autoFocus />
         </div>
         <div className="doc-list">
-          {results.length === 0 ? <p className="empty-state">No matches found.</p> : results.map(doc => (
+          {results.length === 0 ? <p className="empty-state">{t('folders.no_matches')}</p> : results.map(doc => (
             <div key={doc.id} className="doc-row" onClick={() => dispatch({ type:'SET_VIEW', view:'detail', docId: doc.id })}>
               <span className="doc-row__name">{doc.is_done ? "✅ " : ""}{doc.file_name}</span>
               <span className="doc-row__sender muted">{doc.sender}</span>
@@ -73,12 +70,12 @@ export default function FolderView() {
     <div className="page-container">
       <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <h1 className="page-title" style={{ flex: 1 }}>{t('folders.title')}</h1>
-        <input type="text" placeholder="Search documents..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} />
+        <input type="text" placeholder={t('folders.search_placeholder')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} style={{ padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', width: '100%', maxWidth: '300px', fontSize: '0.9rem' }} />
       </div>
 
       {path.cat && (
         <button className="btn btn-outline" onClick={goBack} style={{ alignSelf: 'flex-start', marginBottom: '-0.5rem', padding: '0.3rem 0.8rem', fontSize: '0.85rem' }}>
-          ← Back
+          ← {t('detail.back')}
         </button>
       )}
 

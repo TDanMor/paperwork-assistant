@@ -47,9 +47,9 @@ export default function Upload() {
           let waitSeconds = 0;
           while (!isModelLoaded() && waitSeconds < 60) {
             if (state.modelStatus === 'error') {
-              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'Recovering GPU...' });
+              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('upload.gpu_reset') });
             }
-            updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: 'Waiting for GPU...' });
+            updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: t('upload.waiting_gpu') });
             await new Promise(r => setTimeout(r, 2000));
             waitSeconds += 2;
           }
@@ -163,8 +163,8 @@ export default function Upload() {
       {queue.length > 0 && (
         <div className="detail-card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>📋 Processing Queue ({queue.filter(q => q.status === 'done').length}/{queue.length})</h2>
-            <button className="btn btn-outline btn-sm" onClick={clearQueue}>Clear Queue</button>
+            <h2 style={{ margin: 0, fontSize: '1.1rem' }}>📋 {t('upload.processing_queue')} ({queue.filter(q => q.status === 'done').length}/{queue.length})</h2>
+            <button className="btn btn-outline btn-sm" onClick={clearQueue}>{t('upload.clear_queue')}</button>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -174,12 +174,12 @@ export default function Upload() {
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <p style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.2rem' }}>📄 {item.name}</p>
                   <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>
-                    {item.status === 'pending' && 'Waiting in queue...'}
-                    {item.status === 'processing_ocr' && 'Reading text (OCR)...'}
-                    {item.status === 'processing_ai' && (item.errorMsg || 'AI analyzing document...')}
-                    {item.status === 'saving' && 'Saving locally...'}
-                    {item.status === 'done' && 'Successfully processed!'}
-                    {item.status === 'error' && `Error: ${item.errorMsg}`}
+                    {item.status === 'pending' && t('upload.status_pending')}
+                    {item.status === 'processing_ocr' && t('upload.status_ocr')}
+                    {item.status === 'processing_ai' && (item.errorMsg || t('upload.status_ai'))}
+                    {item.status === 'saving' && t('upload.status_saving')}
+                    {item.status === 'done' && t('upload.status_done')}
+                    {item.status === 'error' && `${t('model.error')}: ${item.errorMsg}`}
                   </p>
                 </div>
 
@@ -192,13 +192,13 @@ export default function Upload() {
 
                   {item.status === 'done' && item.savedDoc && (
                     <button className="btn btn-primary btn-sm" onClick={() => dispatch({ type: 'SET_VIEW', view: 'detail', docId: item.savedDoc.id })}>
-                      View Details
+                      {t('upload.view_details')}
                     </button>
                   )}
 
-                  {item.status === 'error' && <span style={{ color: 'var(--c-overdue)', fontSize: '0.8rem', fontWeight: 700 }}>Failed</span>}
-                  {item.status === 'done' && !item.aiFailed && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ Done</span>}
-                  {item.status === 'done' && item.aiFailed && <span style={{ color: 'var(--c-urgent)', fontSize: '0.8rem', fontWeight: 700 }}>⚠️ AI Unavailable</span>}
+                  {item.status === 'error' && <span style={{ color: 'var(--c-overdue)', fontSize: '0.8rem', fontWeight: 700 }}>{t('upload.badge_failed')}</span>}
+                  {item.status === 'done' && !item.aiFailed && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ {t('upload.badge_done')}</span>}
+                  {item.status === 'done' && item.aiFailed && <span style={{ color: 'var(--c-urgent)', fontSize: '0.8rem', fontWeight: 700 }}>⚠️ {t('upload.badge_ai_unavailable')}</span>}
                 </div>
 
               </div>

@@ -20,7 +20,7 @@ export default function NavBar() {
           <button
             key={item.view}
             className={`nav-btn${state.view === item.view ? ' active' : ''}`}
-            onClick={() => { if (state.isUploading) { alert('Analysis in progress! Please wait for it to finish.'); return; } dispatch({ type: 'SET_VIEW', view: item.view }) }}
+            onClick={() => { if (state.isUploading) { alert(t('nav.uploading_alert')); return; } dispatch({ type: 'SET_VIEW', view: item.view }) }}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-label">{t(item.labelKey)}</span>

@@ -20,7 +20,7 @@ export default function ModelLoader() {
       await new Promise(r => setTimeout(r, 2000));
     }
 
-    dispatch({ type: 'SET_MODEL_STATUS', status: 'loading', progress: 0, message: 'Starting…' });
+    dispatch({ type: 'SET_MODEL_STATUS', status: 'loading', progress: 0, message: t('model.starting') });
     try {
       await loadModel((pct, msg) => {
         dispatch({ type: 'SET_MODEL_STATUS', status: 'loading', progress: pct, message: msg });
@@ -72,7 +72,7 @@ export default function ModelLoader() {
     return (
       <div className="model-banner model-banner--error">
         <span>⚠️ {t('model.error')}: {modelMessage}</span>
-        <button className="btn btn-outline btn-sm" onClick={handleLoad}>Retry</button>
+        <button className="btn btn-outline btn-sm" onClick={handleLoad}>{t('model.retry')}</button>
       </div>
     );
   }

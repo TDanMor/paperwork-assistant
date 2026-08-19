@@ -28,7 +28,7 @@ export default function DocumentDetail({ docId }) {
     }
   }, [doc]);
 
-  if (!doc) return <div className="page-container"><p className="muted">Loading…</p></div>;
+  if (!doc) return <div className="page-container"><p className="muted">{t('detail.loading')}</p></div>;
 
   async function handleDelete() {
     if (!window.confirm(t('settings.clear_confirm'))) return;
@@ -40,7 +40,7 @@ export default function DocumentDetail({ docId }) {
   async function handleToggleDone() {
     let note = doc.done_note || '';
     if (!doc.is_done) {
-      const input = window.prompt('Add an optional note (e.g. "Paid via bank transfer"):');
+      const input = window.prompt(t('detail.done_note_prompt'));
       if (input === null) return; // Cancelled
       note = input;
     }
@@ -91,7 +91,7 @@ export default function DocumentDetail({ docId }) {
           <div className="detail-card" style={{ marginBottom: '1.25rem' }}>
             <h2>📋 {t('detail.summary')}</h2>
             <p style={{ whiteSpace: 'pre-line' }}>
-              {typeof doc.summary === 'string' ? doc.summary : (doc.summary ? JSON.stringify(doc.summary) : 'No summary available.')}
+              {typeof doc.summary === 'string' ? doc.summary : (doc.summary ? JSON.stringify(doc.summary) : t('detail.none_saved'))}
             </p>
           </div>
 
@@ -125,8 +125,8 @@ export default function DocumentDetail({ docId }) {
           <div className="detail-card" style={{ marginBottom: '1.25rem', borderLeft: doc.is_done ? '4px solid var(--c-informational)' : '4px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h2 style={{ marginBottom: '0.25rem', fontSize: '1rem' }}>{doc.is_done ? '✅ Marked as Done' : '⏳ Pending Action'}</h2>
-                {doc.is_done && doc.done_note && <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Note: {doc.done_note}</p>}
+                <h2 style={{ marginBottom: '0.25rem', fontSize: '1rem' }}>{doc.is_done ? `✅ ${t('detail.mark_done')}` : `⏳ ${t('detail.pending')}`}</h2>
+                {doc.is_done && doc.done_note && <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>{t('detail.done_note_label')}{doc.done_note}</p>}
                 {!doc.is_done && generateGoogleCalendarUrl(doc) && (
                   <a
                     href={generateGoogleCalendarUrl(doc)}
@@ -135,12 +135,12 @@ export default function DocumentDetail({ docId }) {
                     className="btn btn-outline btn-sm"
                     style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', fontSize: '0.8rem' }}
                   >
-                    📅 Add to Google Calendar
+                    📅 {t('detail.calendar_add')}
                   </a>
                 )}
               </div>
               <button className={`btn ${doc.is_done ? 'btn-outline' : 'btn-primary'}`} onClick={handleToggleDone}>
-                {doc.is_done ? 'Mark as Pending' : 'Mark as Done'}
+                {doc.is_done ? t('detail.mark_pending') : t('detail.mark_done')}
               </button>
             </div>
           </div>
