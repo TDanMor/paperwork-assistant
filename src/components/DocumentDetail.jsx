@@ -110,7 +110,13 @@ export default function DocumentDetail({ docId }) {
                 <Row label={t('detail.category')} value={`${t(`categories.${doc.main_category}`)} › ${t(`categories.${doc.sub_category}`)}`} />
                 {doc.dates?.document_date && <Row label={t('detail.date')} value={doc.dates.document_date} />}
                 {doc.dates?.due_date && <Row label={t('detail.due_date')} value={doc.dates.due_date} bold />}
-                {doc.money?.amount != null && <Row label={t('detail.amount')} value={`${doc.money.amount} ${doc.money.currency || ''}`} bold />}
+                {doc.money?.amount != null && (
+                  <Row
+                    label={t('detail.amount')}
+                    value={`${doc.money.amount} ${doc.money.currency || 'EUR'}`}
+                    bold
+                  />
+                )}
                 <Row label={t('detail.action')} value={t(`actions.${doc.action_required}`) || doc.action_required} />
               </tbody>
             </table>

@@ -2,12 +2,16 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Expert Doc Analyzer. Output FLAT JSON in ${langName}.
-Rules:
-- NEVER include "Here is the output", "Logic:", or any preamble.
-- Summary: 2 direct sentences ONLY.
-- Intent: DEBT (bill), CREDIT (subsidy/refund), ACTION (notice).
-- If "Kostenplan" or "Zuschuss": intent="CREDIT", category="Healthcare", action="file".
+  return `Expert Doc Analyzer for non-native speakers. Output FLAT JSON in ${langName}.
+
+CRITICAL PERSONA:
+- Translate EVERY German term into simple ${langName}.
+- Never use terms like "Heil- und Kostenplan" or "zahnärztliche Praxis". Use "Dental Cost Plan" and "Dentist".
+- Be honest about TIMING. If action depends on a future event (like finishing treatment), say so.
+
+SCHEMA RULES:
+- summary: "This is [Document Type] from [Sender]. [Condition for action]. [What to do]."
+- action_steps: Array of simple translated tasks.
 
 JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
@@ -176,6 +180,14 @@ export function parseAIResponse(raw) {
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
   if (moneyObj && typeof moneyObj === 'object') {
     result.money = { ...result.money, ...moneyObj };
+    // 🛡️ UI Fix: Strip redundant currency from the number if the AI put it there
+    if (typeof result.money.amount === 'string') {
+        result.money.amount = parseFloat(result.money.amount.replace(/[^0-9.]/g, ''));
+    }
+    // Clean up currency string (remove EUR EUR issues)
+    if (result.money.currency) {
+        result.money.currency = result.money.currency.replace(/EUR/g, '').trim() || 'EUR';
+    }
   } else {
     const amt = findKeyInObj(jsonParsed, ['amount', 'total', 'gesamtbetrag']) || getFuzzy(/(?:Total Amount|Gesamtbetrag|Total|Amount|EUR):\s*.*?(\d+[.,]\d{2,})/i);
     if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
