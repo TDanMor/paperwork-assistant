@@ -4,18 +4,18 @@
 
   return `Senior Admin Expert for non-native speakers. Output FLAT JSON in ${langName}.
 
-GERMAN DOCUMENT MASTER INDEX:
-1. "Heil- und Kostenplan" / "Zuschuss": Subsidy approval. NOT A BILL. Intent: CREDIT. Action: file. Note: User must act ONLY after treatment.
-2. "Steuerbescheid": Tax assessment. Check "Nachzahlung" (Intent: DEBT, Action: pay) vs "Erstattung" (Intent: CREDIT, Action: file).
-3. "Rundfunkbeitrag": TV/Radio Tax (GEZ). Usually DEBT. Action: pay.
-4. "Mahnung" / "Vollstreckung": Overdue/Enforcement. Intent: DEBT. Urgency: overdue.
-5. "Bescheid" / "Mitteilung": Official decision. Intent: ACTION. Action: respond.
-6. "Rechnung": Bill. Intent: DEBT. Action: pay.
+GERMAN BUREAUCRACY MASTER INDEX:
+1. "Heil- und Kostenplan" / "Zuschuss": Subsidy approval. NOT A BILL. Intent: CREDIT. Action: file. Note: Act ONLY after treatment.
+2. "Steuerbescheid" / "Nebenkosten": AMBIGUOUS. Check "Nachzahlung" (DEBT, pay) vs "Erstattung/Guthaben" (CREDIT, file).
+3. "Aufhebungsbescheid" / "Sanktion" / "Ablehnung": CRITICAL. Benefits stopped or denied. Intent: ACTION. Action: respond.
+4. "Mahnung" / "Vollstreckung" / "Pfändung": CRITICAL. Overdue/Enforcement. Action: pay or consult expert.
+5. "Rechtsmittelbelehrung" / "Widerspruch": High priority. Explains your 1-month right to appeal.
+6. "Aufforderung zur Mitwirkung" / "Meldeaufforderung": Action required. Submit docs or attend meeting.
 
 FIELD RULES:
-- summary: 1-2 direct sentences. Translate all terms (e.g. "Dental Plan" instead of "Kostenplan").
-- action_steps: Array of simple translated tasks.
-- sender: Exact company/office (e.g. "Finanzamt", "AOK", "Vodafone").
+- summary: 1-2 direct sentences. Translate ALL technical terms. Explicitly mention deadlines if found.
+- action_steps: Array of concrete tasks. Differentiate between "Now" and "After [Condition]".
+- sender: Exact office (e.g. "Jobcenter", "Finanzamt", "TK", "Deutsche Rentenversicherung").
 - main_category: Insurance, Finance, Government, Healthcare, Housing, Employment, Utility, Other.
 - urgency: overdue, urgent, upcoming, informational.
 
@@ -52,12 +52,19 @@ export function smartSliceOCR(text, maxChars = 2500) {
 
   const ranges = [{ start: 0, end: 900 }, { start: totalLen - 400, end: totalLen }];
 
-  // 🔍 ENHANCED KEYWORDS: Catching critical German admin labels
+  // 🔍 ELITE KEYWORDS (Audit Optimized): Catching critical German admin DNA
   const keywords = [
-    'abholung', 'pickup', 'nach abschluss', 'voraussetzung', 'termin', 'fris',
-    'iban', 'erstatt', 'zuschuss', 'festzuschuss', 'bescheid', 'rechnung', 'mahnung',
-    'nachzahlung', 'gesamtbetrag', 'summe', 'fällig', 'überweisen', 'kassenzeichen',
-    'aktenzeichen', 'steuernummer', 'rundfunkbeitrag', 'beitragsservice'
+    // Deadlines & Legal
+    'rechtsbehelfsbelehrung', 'rechtsmittelbelehrung', 'widerspruch', 'einspruch', 'frist', 'nachzahlung',
+    'erstattung', 'guthaben', 'voraussetzung', 'nach abschluss', 'nach eingang', 'vorbehaltlich',
+    // Enforcement (Critical)
+    'vollstreckung', 'mahnbescheid', 'pfändung', 'pfüb', 'räumungsklage', 'gerichtsvollzieher',
+    // High-Risk Status
+    'aufhebung', 'ablehnung', 'sanktion', 'minderung', 'einstellung', 'rückforderung',
+    // Authority Specifics
+    'jobcenter', 'arbeitsagentur', 'finanzamt', 'familienkasse', 'rentenversicherung', 'krankenkasse',
+    // Common Logistics
+    'abholung', 'termin', 'meldeaufforderung', 'mitwirkung', 'iban', 'gesamtbetrag'
   ];
 
   const bodyText = sanitized.slice(900, -400);
@@ -65,12 +72,12 @@ export function smartSliceOCR(text, maxChars = 2500) {
   let zoneCount = 0;
 
   keywords.forEach(kw => {
-    if (zoneCount >= 7) return;
+    if (zoneCount >= 8) return;
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(bodyText)) !== null && zoneCount < 7) {
-      const start = Math.max(0, match.index - 120) + bodyOffset;
-      const end = Math.min(bodyText.length, match.index + 220) + bodyOffset;
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 8) {
+      const start = Math.max(0, match.index - 100) + bodyOffset;
+      const end = Math.min(bodyText.length, match.index + 250) + bodyOffset;
       ranges.push({ start, end });
       zoneCount++;
       regex.lastIndex += 350;
@@ -90,7 +97,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nOutput ${langName} JSON. No preamble. Direct facts only.`;
+  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nAnalyze doc. Output ${langName} JSON. Differentiate DEBT (User pays) from CREDIT (User receives). Focus on Deadlines & Conditions.`;
 }
 
 export function parseAIResponse(raw) {
@@ -100,11 +107,13 @@ export function parseAIResponse(raw) {
   const result = getFallbackData();
   const lowerRaw = raw.toLowerCase();
 
-  // 🛡️ PRE-PARSER SENDER FIX
-  if (lowerRaw.includes("aok bayern") || lowerRaw.includes("aok - postfach")) result.sender = "AOK Bayern";
-  else if (lowerRaw.includes("rundfunkbeitrag") || lowerRaw.includes("beitragsservice")) result.sender = "Beitragsservice (GEZ)";
+  // 🛡️ PRE-PARSER SENDER ANCHORS (Higher Reliability than AI)
+  if (lowerRaw.includes("jobcenter")) result.sender = "Jobcenter";
   else if (lowerRaw.includes("finanzamt")) result.sender = "Finanzamt";
-  else if (lowerRaw.includes("aok")) result.sender = "AOK";
+  else if (lowerRaw.includes("aok bayern")) result.sender = "AOK Bayern";
+  else if (lowerRaw.includes("deutsche rentenversicherung") || lowerRaw.includes(" drv ")) result.sender = "Deutsche Rentenversicherung";
+  else if (lowerRaw.includes("familienkasse")) result.sender = "Familienkasse";
+  else if (lowerRaw.includes("rundfunkbeitrag") || lowerRaw.includes("beitragsservice")) result.sender = "Beitragsservice (GEZ)";
 
   let cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
@@ -146,7 +155,7 @@ export function parseAIResponse(raw) {
   };
 
   // 1. SENDER
-  const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'companyname', 'from']);
+  const rawSender = findKeyInObj(jsonParsed, ['sender', 'company', 'from']);
   if (rawSender && typeof rawSender === 'object') {
     result.sender = rawSender.company_name || rawSender.name || Object.values(rawSender)[0] || result.sender;
   } else if (rawSender) {
@@ -157,7 +166,7 @@ export function parseAIResponse(raw) {
   const rawSummary = findKeyInObj(jsonParsed, ['summary', 'explanation']) || getFuzzy(/(?:Summary|Explanation|Analysis):\s*([\s\S]*?)(?:Action Steps|What to do|JSON|$)/i) || cleanRaw.split('\n\n')[0].trim();
   let summary = Array.isArray(rawSummary) ? rawSummary.join(' ') : String(rawSummary);
 
-  const chatter = ["here is the output", "in english json", "json format", "logic:", "output:", "analysis:", "location:", "time:", "context:", "output:"];
+  const chatter = ["here is the output", "in english json", "json format", "logic:", "output:", "analysis:", "location:", "time:", "context:"];
   chatter.forEach(phrase => {
     const regex = new RegExp(`^.*?${phrase.replace(':', '\\:')}.*?(\\n|\\:|$)`, 'gi');
     summary = summary.replace(regex, '');
@@ -172,67 +181,79 @@ export function parseAIResponse(raw) {
     .map(s => s.replace(/(Logistics|Conditions|Note):\s*[\s\S]*$/gi, '').trim())
     .filter(s => s.length > 5);
 
-  if (result.action_steps.length === 0) {
-     if (lowerRaw.includes("abschluss")) result.action_steps = ["Finish treatment.", "Submit documents to sender."];
-     else result.action_steps = ["Check the document for instructions."];
-  }
-
-  // 4. METADATA & REFINEMENT
-  result.intent = findKeyInObj(jsonParsed, ['intent']) || result.intent;
-  result.document_type = findKeyInObj(jsonParsed, ['documenttype', 'type']) || (lowerRaw.includes('rechnung') ? 'invoice' : result.document_type);
-  result.main_category = findKeyInObj(jsonParsed, ['maincategory', 'category']) || result.main_category;
-
-  const rawAction = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
+  // 4. DETERMINISTIC OVERRIDES (Audit Driven)
   const validActions = ["pay", "respond", "file", "attend", "renew", "none"];
+  const rawAction = findKeyInObj(jsonParsed, ['actionrequired', 'action']) || result.action_required;
   let act = String(rawAction).toLowerCase();
+
+  // A. Mapping fuzzy actions to keys
   if (!validActions.includes(act)) {
     if (act.includes('pay')) act = 'pay';
-    else if (act.includes('respond') || act.includes('submit')) act = 'respond';
+    else if (act.includes('respond') || act.includes('submit') || act.includes('widerspruch') || act.includes('appeal')) act = 'respond';
+    else if (act.includes('attend') || act.includes('appointment')) act = 'attend';
     else if (act.includes('file') || act.includes('save')) act = 'file';
     else act = 'none';
   }
-  result.action_required = act;
 
-  // 🛡️ DOMAIN-SPECIFIC REFINEMENTS (DETERMINISTIC)
-
-  // A. AOK / Healthcare
-  if (lowerRaw.includes('kostenplan') || lowerRaw.includes('zuschuss') || result.sender.includes('AOK')) {
-    result.intent = 'CREDIT';
-    result.action_required = 'file';
-    result.document_type = lowerRaw.includes('kostenplan') ? 'cost_approval' : 'notice';
-    result.main_category = 'Healthcare';
+  // B. Legal Remedies & Urgency
+  if (lowerRaw.includes("rechtsbehelfsbelehrung") || lowerRaw.includes("rechtsmittelbelehrung") || lowerRaw.includes("widerspruch")) {
+    result.urgency = "urgent";
+    if (act === "file" || act === "none") act = "respond"; // High priority review needed
   }
 
-  // B. Finanzamt / Taxes
-  if (lowerRaw.includes('finanzamt') || lowerRaw.includes('steuerbescheid')) {
-    result.main_category = 'Government';
-    if (lowerRaw.includes('nachzahlung') || lowerRaw.includes('zahlen sie bitte')) {
-        result.intent = 'DEBT';
-        result.action_required = 'pay';
-    } else if (lowerRaw.includes('erstattung') || lowerRaw.includes('guthaben')) {
-        result.intent = 'CREDIT';
-        result.action_required = 'file';
+  // C. Enforcement / Legal Danger
+  if (lowerRaw.includes("vollstreckung") || lowerRaw.includes("pfändung") || lowerRaw.includes("gerichtsvollzieher") || lowerRaw.includes("räumungsklage")) {
+    result.urgency = "overdue";
+    act = "respond";
+    result.summary = "⚠️ LEGAL ACTION DETECTED. " + result.summary;
+  }
+
+  // D. Disambiguation (Guthaben vs Nachzahlung)
+  if (lowerRaw.includes("nebenkosten") || lowerRaw.includes("jahresabrechnung") || lowerRaw.includes("steuerbescheid")) {
+    if (lowerRaw.includes("guthaben") || lowerRaw.includes("erstattung")) {
+        result.intent = "CREDIT";
+        act = "file";
+    } else if (lowerRaw.includes("nachzahlung") || lowerRaw.includes("fordern wir") || lowerRaw.includes("zahlen sie bitte")) {
+        result.intent = "DEBT";
+        act = "pay";
     }
   }
 
-  // C. GEZ / Beitragsservice
-  if (lowerRaw.includes('rundfunkbeitrag') || lowerRaw.includes('beitragsservice')) {
-    result.main_category = 'Utility';
-    result.action_required = lowerRaw.includes('lastschrift') ? 'file' : 'pay';
+  // E. Jobcenter / Benefit specific
+  if (lowerRaw.includes("jobcenter") || lowerRaw.includes("agentur für arbeit")) {
+    result.main_category = "Government";
+    if (lowerRaw.includes("aufhebung") || lowerRaw.includes("sanktion") || lowerRaw.includes("minderung")) {
+        result.urgency = "overdue";
+        act = "respond";
+    } else if (lowerRaw.includes("bewilligung")) {
+        result.intent = "CREDIT";
+        act = "file";
+    }
   }
+
+  // F. Rentenversicherung
+  if (lowerRaw.includes("rentenversicherung")) {
+    result.main_category = "Finance"; // or dedicated Pension if added
+    act = lowerRaw.includes("bescheid") ? "file" : act;
+  }
+
+  // G. Immigration
+  if (lowerRaw.includes("ausländerbehörde") || lowerRaw.includes("bamf")) {
+    result.main_category = "Government";
+    result.urgency = lowerRaw.includes("ablehnung") ? "overdue" : "urgent";
+    act = "respond";
+  }
+
+  result.action_required = act;
 
   // 5. MONEY & DATES
   const moneyObj = findKeyInObj(jsonParsed, ['money']);
   if (moneyObj && typeof moneyObj === 'object') {
     result.money = { ...result.money, ...moneyObj };
-    if (typeof result.money.amount === 'string') {
-        result.money.amount = parseFloat(result.money.amount.replace(/[^0-9.]/g, ''));
-    }
-    if (result.money.currency) {
-        result.money.currency = result.money.currency.replace(/EUR/g, '').trim() || 'EUR';
-    }
+    if (typeof result.money.amount === 'string') result.money.amount = parseFloat(result.money.amount.replace(/[^0-9.]/g, ''));
+    if (result.money.currency) result.money.currency = result.money.currency.replace(/EUR/g, '').trim() || 'EUR';
   } else {
-    const amt = findKeyInObj(jsonParsed, ['amount', 'total', 'gesamtbetrag']) || getFuzzy(/(?:Total Amount|Gesamtbetrag|Total|Amount|EUR):\s*.*?(\d+[.,]\d{2,})/i);
+    const amt = getFuzzy(/(?:Total Amount|Gesamtbetrag|Total|Amount|EUR):\s*.*?(\d+[.,]\d{2,})/i);
     if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
   }
   const datesObj = findKeyInObj(jsonParsed, ['dates']);
