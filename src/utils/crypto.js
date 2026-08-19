@@ -1,15 +1,14 @@
 /**
  * Utilities for AES-GCM encryption/decryption using the Web Crypto API.
- * Hardened v2.2 - Fixes [LOCKED] bug and binary encoding issues.
+ * Hardened v2.3 - Implements full binary safety and format detection.
  */
 
 const ITERATIONS_V2 = 600000;
-const ITERATIONS_V1 = 100000; // Legacy Phase 4
 const SALT_SIZE = 16;
 const IV_SIZE = 12;
 
 /**
- * Robust Base64 to Uint8Array converter (no call stack issues)
+ * Robust Base64 to Uint8Array converter.
  */
 function base64ToBytes(base64) {
   const binString = atob(base64);
@@ -17,7 +16,7 @@ function base64ToBytes(base64) {
 }
 
 /**
- * Robust Uint8Array to Base64 converter
+ * Robust Uint8Array to Base64 converter.
  */
 function bytesToBase64(bytes) {
   const binString = Array.from(bytes, (byte) => String.fromCodePoint(byte)).join("");
@@ -27,7 +26,7 @@ function bytesToBase64(bytes) {
 /**
  * Derives an AES-GCM key from a PIN and salt.
  */
-export async function deriveKeyFromPin(pin, salt, iterations = ITERATIONS_V2) {
+export async function deriveKeyFromPin(pin, salt) {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
@@ -40,7 +39,7 @@ export async function deriveKeyFromPin(pin, salt, iterations = ITERATIONS_V2) {
     {
       name: 'PBKDF2',
       salt: salt,
-      iterations: iterations,
+      iterations: ITERATIONS_V2,
       hash: 'SHA-256'
     },
     keyMaterial,
@@ -51,17 +50,17 @@ export async function deriveKeyFromPin(pin, salt, iterations = ITERATIONS_V2) {
 }
 
 /**
- * Encrypts data using a Master Key.
+ * Encrypts data (string or ArrayBuffer) using a Master Key.
  * Adds 'v2:' prefix for format identification.
  */
-export async function encryptData(text, cryptoKey) {
+export async function encryptData(data, cryptoKey) {
   const iv = crypto.getRandomValues(new Uint8Array(IV_SIZE));
-  const enc = new TextEncoder();
+  const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
 
   const encrypted = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv: iv },
     cryptoKey,
-    enc.encode(text)
+    bytes
   );
 
   const combined = new Uint8Array(iv.length + encrypted.byteLength);
@@ -72,40 +71,31 @@ export async function encryptData(text, cryptoKey) {
 }
 
 /**
- * Decrypts data with automatic legacy fallback.
+ * Decrypts data into a Uint8Array.
+ */
+export async function decryptToBytes(combinedB64, cryptoKey) {
+  if (!combinedB64.startsWith('v2:')) {
+    throw new Error("Unsupported or legacy data format.");
+  }
+
+  const b64 = combinedB64.slice(3);
+  const combined = base64ToBytes(b64);
+  const iv = combined.slice(0, IV_SIZE);
+  const ciphertext = combined.slice(IV_SIZE);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: iv },
+    cryptoKey,
+    ciphertext
+  );
+
+  return new Uint8Array(decrypted);
+}
+
+/**
+ * Decrypts data into a String.
  */
 export async function decryptData(combinedB64, cryptoKey) {
-  try {
-    // 1. New Format Check (v2:)
-    if (combinedB64.startsWith('v2:')) {
-      const b64 = combinedB64.slice(3);
-      const combined = base64ToBytes(b64);
-      const iv = combined.slice(0, IV_SIZE);
-      const ciphertext = combined.slice(IV_SIZE);
-
-      const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: iv },
-        cryptoKey,
-        ciphertext
-      );
-      return new TextDecoder().decode(decrypted);
-    }
-
-    // 2. Legacy Fallback (No prefix)
-    // Legacy docs are rare and likely permanently locked if derived key changed.
-    // However, if the key derivation is identical, we can try.
-    const combined = base64ToBytes(combinedB64);
-
-    // Heuristic for Phase 4: [salt(16)][iv(12)][ciphertext]
-    if (combined.length > (SALT_SIZE + IV_SIZE)) {
-        // We can't easily decrypt Phase 4 here because we don't have the raw PIN
-        // to re-derive with 100k iterations.
-        throw new Error("Legacy format detected. Re-upload document to encrypt with new vault.");
-    }
-
-    throw new Error("Unknown data format.");
-  } catch (e) {
-    console.error("Decryption failed:", e);
-    throw e;
-  }
+  const bytes = await decryptToBytes(combinedB64, cryptoKey);
+  return new TextDecoder().decode(bytes);
 }

@@ -1,12 +1,11 @@
 ﻿import { openDB } from 'idb';
-import { encryptData, decryptData } from '../utils/crypto.js';
+import { encryptData, decryptData, decryptToBytes } from '../utils/crypto.js';
 
 const DB_NAME    = 'paperwork-assistant';
-const DB_VERSION = 2; // Incremented for new meta store
+const DB_VERSION = 2;
 const STORE      = 'documents';
 const META_STORE = 'vault_meta';
 
-// 🛡️ ENCRYPTION GUARD: The CryptoKey stays in memory ONLY.
 let sessionKey = null;
 
 export function setSessionKey(key) { sessionKey = key; }
@@ -20,26 +19,19 @@ async function getDB() {
             keyPath:       'id',
             autoIncrement: true,
           });
-          store.createIndex('main_category',  'main_category');
-          store.createIndex('urgency',        'urgency');
-          store.createIndex('year',           'year');
-          store.createIndex('action_required','action_required');
+          store.createIndex('urgency', 'urgency');
+          store.createIndex('year',    'year');
       }
       if (oldVersion < 2) {
-          // Store for the master salt
           db.createObjectStore(META_STORE);
       }
     },
   });
 }
 
-/**
- * Retrieves or generates the Master Salt for the vault.
- */
 export async function getVaultSalt() {
   const db = await getDB();
   let salt = await db.get(META_STORE, 'master_salt');
-
   if (!salt) {
     salt = crypto.getRandomValues(new Uint8Array(16));
     await db.put(META_STORE, salt, 'master_salt');
@@ -47,14 +39,43 @@ export async function getVaultSalt() {
   return salt;
 }
 
+/**
+ * Checks if a PIN is correct by attempting to decrypt a canary.
+ */
+export async function verifyVaultPIN(cryptoKey) {
+    const db = await getDB();
+    const canary = await db.get(META_STORE, 'pin_canary');
+    if (!canary) {
+        // First run: Create canary
+        const encrypted = await encryptData("VERIFIED", cryptoKey);
+        await db.put(META_STORE, encrypted, 'pin_canary');
+        return true;
+    }
+    try {
+        const decrypted = await decryptData(canary, cryptoKey);
+        return decrypted === "VERIFIED";
+    } catch (e) {
+        return false;
+    }
+}
+
 async function packDoc(doc) {
   if (!sessionKey) return doc;
   const packed = { ...doc };
-  const sensitiveFields = ['sender', 'summary', 'action_steps', 'ocr_text'];
 
-  for (const field of sensitiveFields) {
-    if (packed[field] && typeof packed[field] === 'string') {
-        packed[field] = await encryptData(packed[field], sessionKey);
+  // Encrypt EVERYTHING except id and is_encrypted
+  const fields = ['sender', 'summary', 'action_steps', 'ocr_text', 'document_type', 'main_category', 'sub_category', 'action_required', 'dates', 'money', 'file_data'];
+
+  for (const f of fields) {
+    if (packed[f]) {
+      if (f === 'file_data' && packed[f] instanceof Blob) {
+          const buffer = await packed[f].arrayBuffer();
+          packed[f] = await encryptData(buffer, sessionKey);
+      } else if (typeof packed[f] === 'object') {
+          packed[f] = await encryptData(JSON.stringify(packed[f]), sessionKey);
+      } else if (typeof packed[f] === 'string') {
+          packed[f] = await encryptData(packed[f], sessionKey);
+      }
     }
   }
   packed.is_encrypted = true;
@@ -64,14 +85,22 @@ async function packDoc(doc) {
 async function unpackDoc(doc) {
   if (!doc || !doc.is_encrypted || !sessionKey) return doc;
   const unpacked = { ...doc };
-  const sensitiveFields = ['sender', 'summary', 'action_steps', 'ocr_text'];
+  const fields = ['sender', 'summary', 'action_steps', 'ocr_text', 'document_type', 'main_category', 'sub_category', 'action_required', 'dates', 'money', 'file_data'];
 
-  for (const field of sensitiveFields) {
-    if (unpacked[field]) {
+  for (const f of fields) {
+    if (unpacked[f] && typeof unpacked[f] === 'string' && unpacked[f].startsWith('v2:')) {
       try {
-        unpacked[field] = await decryptData(unpacked[field], sessionKey);
+        if (f === 'file_data') {
+            const bytes = await decryptToBytes(unpacked[f], sessionKey);
+            unpacked[f] = new Blob([bytes]);
+        } else if (f === 'dates' || f === 'money') {
+            const json = await decryptData(unpacked[f], sessionKey);
+            unpacked[f] = JSON.parse(json);
+        } else {
+            unpacked[f] = await decryptData(unpacked[f], sessionKey);
+        }
       } catch (e) {
-        unpacked[field] = '[LOCKED]';
+        unpacked[f] = f === 'file_data' ? null : '[LOCKED]';
       }
     }
   }

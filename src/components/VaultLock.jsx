@@ -23,10 +23,17 @@ export default function VaultLock() {
       // 2. Derive the key (Takes ~0.5s due to 600k iterations)
       const key = await deriveKeyFromPin(pin, salt);
 
-      // 3. Store key in volatile memory
+      // 3. Verify PIN with Canary
+      const isValid = await verifyVaultPIN(key);
+      if (!isValid) {
+        alert("Incorrect PIN. Please try again.");
+        return;
+      }
+
+      // 4. Store key in volatile memory
       setSessionKey(key);
 
-      // 4. Unlock UI
+      // 5. Unlock UI
       dispatch({ type: 'SET_VAULT_LOCKED', payload: false });
 
       // 5. Refresh documents
