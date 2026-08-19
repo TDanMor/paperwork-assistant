@@ -8,8 +8,8 @@ Respond ONLY with JSON. No prose. No "document" wrapper key.
 REQUIRED SCHEMA (Order is Critical):
 {
   "intent": "DEBT|CREDIT|ACTION",
-  "summary": "2 simple sentences in ${langName} explaining what this is and what to do.",
-  "action_steps": "Numbered steps in ${langName}.",
+  "summary": "Explain exactly what this is and WHEN the user must act (Now? After treatment? Monthly?). Use 2 simple sentences in ${langName}.",
+  "action_steps": "Numbered steps in ${langName}. Explicitly include timing/conditions (e.g., 'After finishing X, do Y').",
   "sender": "Exact Company Name",
   "document_type": "invoice|notice|contract|government|healthcare|bank|appointment|fine|other",
   "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
@@ -60,10 +60,15 @@ export function smartSliceOCR(text, maxChars = 2300) {
   ];
 
   const keywords = [
+    // Finance/Logistics
     'iban', 'total', 'amount', 'betrag', 'summe', 'gesamt', 'suma', 'montant',
     'due', 'fällig', 'deadline', 'frist', 'scadență', 'echeance', 'vencimiento',
+    // Status/Timing (CRITICAL: Added for "After treatment" etc)
+    'abschluss', 'finalizare', 'completion', 'after', 'nach', 'după', 'status',
+    // Locations/Logistics
     'address', 'straße', 'location', 'ort', 'adresa', 'direccion',
     'pickup', 'abholung', 'appointment', 'termin', 'programare', 'cita',
+    // Categories
     'miet', 'rent', 'chirie', 'alquiler', 'loyer',
     'fine', 'bußgeld', 'amendă', 'multa', 'amende',
     'festzuschuss', 'zuschuss', 'kostenplan', 'genehmigung', 'bescheid'
@@ -117,7 +122,7 @@ export function parseAIResponse(raw) {
     if (!obj || typeof obj !== 'object') return null;
     for (const target of targetKeys) {
       const normalizedTarget = target.toLowerCase().replace(/[\s_]/g, '');
-      const foundKey = Object.keys(obj).find(k => k.toLowerCase().replace(/[\s_]/g, '') === normalizedTarget);
+      const foundKey = Object.keys(obj).find(k => k.toLowerCase().replace(/[\s_]/g, '') === normalizedK);
       if (foundKey) return obj[foundKey];
     }
     for (const k in obj) {
