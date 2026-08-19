@@ -121,7 +121,7 @@ export default function DocumentDetail({ docId }) {
               <div>
                 <h2 style={{ marginBottom: '0.25rem', fontSize: '1rem' }}>{doc.is_done ? '✅ Marked as Done' : '⏳ Pending Action'}</h2>
                 {doc.is_done && doc.done_note && <p className="muted" style={{ fontSize: '0.85rem', margin: 0 }}>Note: {doc.done_note}</p>}
-                {!doc.is_done && (doc.dates?.due_date || doc.dates?.appointment_date) && (
+                {!doc.is_done && generateGoogleCalendarUrl(doc) && (
                   <a
                     href={generateGoogleCalendarUrl(doc)}
                     target="_blank"

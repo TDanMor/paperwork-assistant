@@ -6,13 +6,16 @@ export function generateGoogleCalendarUrl(doc) {
   if (!doc) return null;
 
   // 1. Determine the best date
-  const rawDate = doc.dates?.appointment_date || doc.dates?.due_date;
-  if (!rawDate) return null;
+  let rawDate = doc.dates?.appointment_date || doc.dates?.due_date;
 
-  // 🛡️ Date Validation: Ensure it's a valid YYYY-MM-DD string
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
-    console.warn("Skipping calendar URL generation: Invalid date format", rawDate);
-    return null;
+  // 🛡️ Fallback: If primary dates are missing or invalid text (e.g. "after treatment"),
+  // try to use the document date so the user can at least pin it.
+  if (!rawDate || !/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+    if (doc.dates?.document_date && /^\d{4}-\d{2}-\d{2}$/.test(doc.dates.document_date)) {
+        rawDate = doc.dates.document_date;
+    } else {
+        return null;
+    }
   }
 
   const d = new Date(rawDate);
