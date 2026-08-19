@@ -9,6 +9,7 @@ import Upload          from './components/Upload.jsx';
 import FolderView      from './components/FolderView.jsx';
 import DocumentDetail  from './components/DocumentDetail.jsx';
 import Settings        from './components/Settings.jsx';
+import VaultLock       from './components/VaultLock.jsx';
 import { getAllDocuments } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
 
@@ -25,6 +26,7 @@ const initialState = {
   selectedDocId: null,     // id of document shown in detail view
   documents:     [],       // all docs loaded from IndexedDB
   isUploading:   false,
+  isVaultLocked: true,     // 🔐 NEW: Track if the user has entered their PIN
 };
 
 // ---------- Reducer — one place to update state ----------
@@ -33,6 +35,9 @@ function reducer(state, action) {
     case 'SET_LANGUAGE':
       localStorage.setItem('pa_lang', action.payload);
       return { ...state, language: action.payload };
+
+    case 'SET_VAULT_LOCKED':
+      return { ...state, isVaultLocked: action.payload };
 
     case 'SET_MODEL_STATUS':
       return {
@@ -108,7 +113,7 @@ export default function App() {
         <NavBar />
 
         <main className="main-content">
-          {renderView()}
+          {state.isVaultLocked ? <VaultLock /> : renderView()}
         </main>
       </div>
     </AppContext.Provider>

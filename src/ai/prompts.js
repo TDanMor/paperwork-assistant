@@ -116,40 +116,27 @@ export function parseAIResponse(raw) {
   }
 
   const result = getFallbackData();
-  const cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
 
-  // 1. BASELINE EXTRACTION (Aggressive Fuzzy)
-  const getFuzzy = (regex) => {
-    const match = cleanRaw.match(regex);
-    return match ? match[1].trim() : null;
-  };
+  // JSON Guard and Regex Rescue removed in Phase 3.
+  // json_object mode + system prompt instruction + intent-first pre-fill
+  // guarantee syntactically valid JSON at the engine level.
+  // Normalization layer below handles schema enforcement only.
 
-  const textAmount = getFuzzy(/(?:Total Amount|Gesamtbetrag|Total|Amount|EUR):\s*.*?(\d+[.,]\d{2,})/i);
-  const textIban = getFuzzy(/IBAN:\s*([A-Z]{2}\d{2}[A-Z0-9\s]{10,34})/i);
-  const textAddr = getFuzzy(/(?:Address|Location|Standort|Exact Address|Schreiberhauer):\s*([\s\S]*?)(?:\n\n|\n\*|$)/i);
-  const textTime = getFuzzy(/(?:Time|Abholung|Zeitraum|Exact Time):\s*(.*?)(?:\n|$)/i);
-  const textSender = getFuzzy(/(?:Sender|Company|From):\s*(.*?)(?:\n|$)/i);
-
-  if (cleanRaw.toLowerCase().includes('rechnung') || cleanRaw.toLowerCase().includes('invoice')) {
-    result.document_type = 'invoice';
-    result.action_required = 'pay';
-    result.main_category = 'Finance';
-  }
-
-  // 2. JSON EXTRACTION
   let jsonParsed = null;
   try {
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      const cleanJson = jsonMatch[0].replace(/,\s*([}\\]])/g, '$1');
-      jsonParsed = JSON.parse(cleanJson);
+      jsonParsed = JSON.parse(jsonMatch[0]);
     }
   } catch (e) {
-    console.warn("JSON block failed to parse.");
+    console.error("Critical: JSON parsing failed despite constrained generation.", e);
+    return result;
   }
 
+  if (!jsonParsed) return result;
+
+  // 🛡️ NORMALIZATION (Schema Enforcement)
   const getJsonVal = (keys) => {
-    if (!jsonParsed) return null;
     for (const k of keys) {
       const normalizedK = k.toLowerCase().replace(/[\s_]/g, '');
       const foundKey = Object.keys(jsonParsed).find(p => p.toLowerCase().replace(/[\s_]/g, '') === normalizedK);
@@ -158,29 +145,26 @@ export function parseAIResponse(raw) {
     return null;
   };
 
-  // 3. MERGE & HEAL
-  result.sender = getJsonVal(['sender', 'company']) || textSender || result.sender;
+  result.sender = getJsonVal(['sender', 'company']) || result.sender;
+  result.summary = getJsonVal(['summary', 'explanation']) || result.summary;
+  result.action_steps = getJsonVal(['actionsteps', 'steps']) || result.action_steps;
+  result.document_type = getJsonVal(['documenttype', 'type']) || result.document_type;
+  result.main_category = getJsonVal(['maincategory', 'category']) || result.main_category;
+  result.action_required = getJsonVal(['actionrequired', 'action']) || result.action_required;
+  result.urgency = getJsonVal(['urgency', 'priority']) || result.urgency;
 
-  const harvestedSummary = cleanRaw.match(/(?:Simplified Summary|Summary|Explanation|Analysis|speaker:)\s*([\s\S]*?)(?:Action Steps|What to do|Exact Address|JSON|$)/i);
-  result.summary = getJsonVal(['summary']) || (harvestedSummary ? harvestedSummary[1].trim() : null) || cleanRaw.split('\n\n')[0].trim();
+  // Money Normalization
+  if (jsonParsed.money && typeof jsonParsed.money === 'object') {
+    result.money = { ...result.money, ...jsonParsed.money };
+  } else {
+    const amt = getJsonVal(['amount', 'total', 'totalamount', 'gesamtbetrag']);
+    if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
+    result.money.currency = getJsonVal(['currency', 'währung']) || 'EUR';
+  }
 
-  const harvestedSteps = cleanRaw.match(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
-  result.action_steps = getJsonVal(['actionsteps', 'steps']) || (harvestedSteps ? harvestedSteps[1].trim() : null) || "Follow the details in the summary box.";
-
-  const amt = getJsonVal(['amount', 'total', 'totalamount', 'gesamtbetrag']) || textAmount;
-  if (amt) result.money.amount = parseFloat(String(amt).replace(',', '.').replace(/[^0-9.]/g, ''));
-
-  const addr = getJsonVal(['address', 'location', 'pickupaddress']) || textAddr;
-  const time = getJsonVal(['time', 'pickuptime']) || textTime;
-  const iban = (getJsonVal(['iban']) || textIban || '').replace(/\s/g, '');
-
-  if (addr && !result.summary.includes(String(addr))) result.summary += ` \nLocation: ${addr}`;
-  if (time && !result.summary.includes(String(time))) result.summary += ` \nTime: ${time}`;
-  if (iban && !result.summary.includes(iban)) result.summary += ` \nIBAN: ${iban}`;
-
-  if (result.document_type === 'other') {
-    const docType = getJsonVal(['documenttype', 'type']);
-    if (docType) result.document_type = docType;
+  // Dates Normalization
+  if (jsonParsed.dates && typeof jsonParsed.dates === 'object') {
+    result.dates = { ...result.dates, ...jsonParsed.dates };
   }
 
   return result;

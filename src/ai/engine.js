@@ -63,14 +63,15 @@ export async function resetEngineState() {
 export async function getTokenCount(text) {
   if (!isModelLoaded()) {
     // 🛡️ Claude Audit Implementation: Conservative fallback if engine isn't ready
-    return Math.ceil(text.length / 3.5);
+    // Using 3.2 chars/token as a more accurate floor for German compound words.
+    return Math.ceil(text.length / 3.2);
   }
   try {
     const tokens = await engine.tokenize(text);
     return tokens.length;
   } catch (e) {
     console.warn("Tokenization failed:", e);
-    return Math.ceil(text.length / 3.5);
+    return Math.ceil(text.length / 3.2);
   }
 }
 
