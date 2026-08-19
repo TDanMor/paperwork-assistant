@@ -14,7 +14,8 @@ export function isVaultLocked() { return sessionKey === null; }
 async function getDB() {
   return openDB(DB_NAME, DB_VERSION, {
     upgrade(db, oldVersion) {
-      if (oldVersion < 1) {
+      console.log(`Upgrading database from ${oldVersion} to ${DB_VERSION}`);
+      if (!db.objectStoreNames.contains(STORE)) {
           const store = db.createObjectStore(STORE, {
             keyPath:       'id',
             autoIncrement: true,
@@ -22,7 +23,7 @@ async function getDB() {
           store.createIndex('urgency', 'urgency');
           store.createIndex('year',    'year');
       }
-      if (oldVersion < 2) {
+      if (!db.objectStoreNames.contains(META_STORE)) {
           db.createObjectStore(META_STORE);
       }
     },
@@ -30,13 +31,18 @@ async function getDB() {
 }
 
 export async function getVaultSalt() {
-  const db = await getDB();
-  let salt = await db.get(META_STORE, 'master_salt');
-  if (!salt) {
-    salt = crypto.getRandomValues(new Uint8Array(16));
-    await db.put(META_STORE, salt, 'master_salt');
+  try {
+    const db = await getDB();
+    let salt = await db.get(META_STORE, 'master_salt');
+    if (!salt) {
+      salt = crypto.getRandomValues(new Uint8Array(16));
+      await db.put(META_STORE, salt, 'master_salt');
+    }
+    return salt;
+  } catch (e) {
+    console.error("Master salt retrieval failed:", e);
+    throw new Error("Vault initialization failed. Your browser database might be corrupted.");
   }
-  return salt;
 }
 
 /**

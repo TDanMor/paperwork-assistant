@@ -41,9 +41,17 @@ export default function VaultLock() {
       dispatch({ type: 'SET_DOCUMENTS', documents: docs });
     } catch (err) {
       console.error("Unlock failed:", err);
-      alert("System error during unlock. Please try again.");
+      alert(`System error during unlock: ${err.message}`);
     } finally {
       setIsUnlocking(false);
+    }
+  };
+
+  const handleClearData = async () => {
+    if (window.confirm("CRITICAL: This will permanently delete all your documents and reset the vault. Only do this if you cannot unlock your vault. Continue?")) {
+      const { openDB } = await import('idb');
+      await indexedDB.deleteDatabase('paperwork-assistant');
+      window.location.reload();
     }
   };
 
@@ -75,6 +83,14 @@ export default function VaultLock() {
           {isUnlocking ? 'Decrypting Vault...' : 'Unlock Vault'}
         </button>
       </form>
+
+      <button
+        onClick={handleClearData}
+        className="btn btn-sm"
+        style={{ marginTop: '2rem', color: 'var(--c-overdue)', fontSize: '0.7rem', opacity: 0.6 }}
+      >
+        Trouble unlocking? Reset local vault
+      </button>
     </div>
   );
 }
