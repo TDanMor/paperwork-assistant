@@ -2,37 +2,13 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `You are a Senior Administrative Expert for non-native speakers. Your job is to analyze complex documents and explain the "Real World" impact.
-
-CRITICAL UNDERSTANDING:
-1. INVOICE (Rechnung): User MUST pay money TO the sender.
-2. COST PLAN / APPROVAL (Heil- und Kostenplan / Bescheid): This is NOT a bill. It is an approval for a subsidy. The sender (e.g. AOK) will pay the user or a doctor later.
-3. NOTICE (Mitteilung): Information about a change or requirement.
-
-ALLOWED LISTS (Use ONLY these exact keys):
-- document_type: "invoice", "notice", "contract", "government_letter", "employment", "healthcare", "bank", "appointment", "fine", "other"
-- main_category: "Finance", "Housing", "Government", "Employment", "Insurance", "Healthcare", "Utility", "Other"
-- action_required: "pay", "respond", "file", "attend", "renew", "none"
-- intent: "DEBT", "CREDIT", "ACTION"
-
-SUMMARY REQUIREMENTS for ${langName}:
-- Sentence 1: Clear identification (e.g. "This is a dental cost approval from AOK, not a bill.")
-- Sentence 2: The "When and How" (e.g. "After your treatment is finished, you must submit your final invoice to get 70% back.")
-
-JSON Schema (Respond ONLY with JSON):
-{
-  "intent": "DEBT|CREDIT|ACTION",
-  "sender": "Exact Company Name",
-  "document_type": "choose from list",
-  "dates": {"document_date": "YYYY-MM-DD", "due_date": "YYYY-MM-DD", "appointment_date": "YYYY-MM-DD"},
-  "money": {"amount": 0.00, "currency": "EUR"},
-  "main_category": "choose from list",
-  "action_required": "choose from list",
-  "urgency": "overdue|urgent|upcoming|informational",
-  "summary": "Expert explanation in ${langName}.",
-  "action_steps": "Numbered steps in ${langName}."
-}
-If a fact is missing, use null.`;
+  return `Expert Doc Analyzer. Target: ${langName}.
+Rules:
+1. Intent: DEBT(User pays), CREDIT(User receives/Subsidy), ACTION(User responds).
+2. Summary: 2 simple sentences. Identify document (e.g. AOK dental subsidy). Detail timing/conditions (e.g. "After treatment, submit invoice").
+3. Logic: Heil- und Kostenplan is CREDIT, not DEBT.
+4. Output: Valid FLAT JSON only. Translate values to ${langName}. Keys in English.
+Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
 
 function sanitizeForPrompt(text) {
@@ -58,38 +34,34 @@ function mergeRanges(ranges) {
   return merged;
 }
 
-export function smartSliceOCR(text, maxChars = 4500) {
+export function smartSliceOCR(text, maxChars = 3500) {
   if (!text || text.length <= maxChars) return text || '';
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
 
+  // Header & Tail are mandatory
   const ranges = [
-    { start: 0, end: 1200 },            // Larger Header (0-1200)
-    { start: totalLen - 600, end: totalLen } // Larger Tail (Last 600)
+    { start: 0, end: 1000 },
+    { start: totalLen - 500, end: totalLen }
   ];
 
   const keywords = [
-    // PRIORITY 1: Logistics & Timing
-    'abholung', 'pickup', 'finalizare', 'nach abschluss', 'voraussetzung', 'termin', 'appointment', 'window', 'zeitraum',
-    'address', 'straße', 'location', 'ort', 'standort',
-    // PRIORITY 2: Financial/Legal Status
-    'iban', 'erstatt', 'reimburse', 'zuschuss', 'festzuschuss', 'genehmigung', 'bescheid',
-    'due', 'fällig', 'deadline', 'frist', 'scadență',
-    // PRIORITY 3: General Metadata
-    'total', 'amount', 'betrag', 'summe', 'gesamt', 'rechnung', 'invoice'
+    'abholung', 'pickup', 'finalizare', 'nach abschluss', 'voraussetzung', 'termin', 'appointment',
+    'address', 'straße', 'location', 'ort', 'standort', 'iban', 'erstatt', 'zuschuss',
+    'festzuschuss', 'genehmigung', 'bescheid', 'due', 'fällig', 'deadline', 'total', 'betrag'
   ];
 
-  const bodyText = sanitized.slice(1200, -600);
-  const bodyOffset = 1200;
+  const bodyText = sanitized.slice(1000, -500);
+  const bodyOffset = 1000;
   let zoneCount = 0;
 
   keywords.forEach(kw => {
-    if (zoneCount >= 8) return; // Allow more zones with larger budget
+    if (zoneCount >= 6) return;
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(bodyText)) !== null && zoneCount < 8) {
-      const start = Math.max(0, match.index - 150) + bodyOffset;
-      const end = Math.min(bodyText.length, match.index + 300) + bodyOffset;
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 6) {
+      const start = Math.max(0, match.index - 100) + bodyOffset;
+      const end = Math.min(bodyText.length, match.index + 200) + bodyOffset;
       ranges.push({ start, end });
       zoneCount++;
       regex.lastIndex += 400;
@@ -97,24 +69,21 @@ export function smartSliceOCR(text, maxChars = 4500) {
   });
 
   const merged = mergeRanges(ranges);
-
-  // Assemble segments until we hit maxChars
   let result = "";
   for (const range of merged) {
     const chunk = sanitized.slice(range.start, range.end);
     if ((result.length + chunk.length + 10) > maxChars) break;
     result += (result ? "\n[...]\n" : "") + chunk;
   }
-
   return result;
 }
 
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  const text = smartSliceOCR(ocrText, 4500);
+  const text = smartSliceOCR(ocrText, 3500);
 
-  return `<document>\n${text}\n</document>\n\nExpert analysis: Differentiate between a debt and a benefit. Focus on LOGISTICS (Location, Time, Conditions). Respond ONLY in ${langName} JSON.`;
+  return `<document>\n${text}\n</document>\n\nAnalyze doc. Intent DEBT vs CREDIT? Focus LOGISTICS (Location, Time, Conditions). JSON in ${langName}.`;
 }
 
 export function parseAIResponse(raw) {
