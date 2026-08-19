@@ -14,7 +14,7 @@ export function generateGoogleCalendarUrl(doc) {
 
   // 2. Build Title: [ACTION] Sender
   const action = (doc.action_required || 'Task').toUpperCase();
-  const title = encodeURIComponent(`[${action}] ${doc.sender || 'Paperwork Task'}`);
+  const title = `[${action}] ${doc.sender || 'Paperwork Task'}`.substring(0, 200);
 
   // 3. Build Description (Summary + Steps)
   // 🛡️ Claude Audit Implementation: Capped length to prevent URL injection/bloat
@@ -23,13 +23,12 @@ export function generateGoogleCalendarUrl(doc) {
   if (description.length > MAX_DESC) {
     description = description.slice(0, MAX_DESC) + '... (truncated)';
   }
-  description = encodeURIComponent(description.trim());
 
   // 4. Try to find a location in the summary or OCR
   let location = '';
   const locMatch = doc.summary?.match(/Location:\s*(.*?)(?:\n|$)/i) || doc.ocr_text?.match(/Standort:\s*(.*?)(?:\n|$)/i);
   if (locMatch) {
-    location = encodeURIComponent(locMatch[1].trim());
+    location = locMatch[1].trim();
   }
 
   // Google Calendar URL construction
@@ -43,5 +42,6 @@ export function generateGoogleCalendarUrl(doc) {
   nextDay.setDate(nextDay.getDate() + 1);
   const endDayStr = nextDay.toISOString().split('T')[0].replace(/-/g, '');
 
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dateStr}/${endDayStr}&details=${description}&location=${location}`;
+  const base = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+  return `${base}&text=${encodeURIComponent(title)}&dates=${encodeURIComponent(dateStr)}/${encodeURIComponent(endDayStr)}&details=${encodeURIComponent(description)}&location=${encodeURIComponent(location)}`;
 }

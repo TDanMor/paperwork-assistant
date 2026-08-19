@@ -61,13 +61,16 @@ export async function resetEngineState() {
  * Returns the token count for a given text.
  */
 export async function getTokenCount(text) {
-  if (!engine) return 0;
+  if (!isModelLoaded()) {
+    // 🛡️ Claude Audit Implementation: Conservative fallback if engine isn't ready
+    return Math.ceil(text.length / 3.5);
+  }
   try {
     const tokens = await engine.tokenize(text);
     return tokens.length;
   } catch (e) {
     console.warn("Tokenization failed:", e);
-    return Math.ceil(text.length / 3.5); // Fallback estimate
+    return Math.ceil(text.length / 3.5);
   }
 }
 

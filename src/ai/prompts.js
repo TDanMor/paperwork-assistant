@@ -2,7 +2,8 @@
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
 
-  return `Analyze this document. Output ONLY valid JSON. All values in ${langName}.
+  return `Analyze this document. Output ONLY valid JSON. Respond ONLY with valid JSON.
+All values in ${langName}.
 JSON Schema:
 {
   "intent": "DEBT|CREDIT|ACTION",
