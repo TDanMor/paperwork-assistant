@@ -4,19 +4,20 @@
 
   return `Senior Admin Expert for non-native speakers. Output FLAT JSON in ${langName}.
 
-KNOWLEDGE BASE (German Docs):
-- "Heil- und Kostenplan" / "Zuschuss": NOT a bill. It is a subsidy approval. Action: "file". Timing: "Wait for treatment end, then submit invoice".
-- "Rechnung": Bill. Action: "pay".
-- "Mahnung": Late notice. Action: "pay". Urgency: "overdue".
-- "Bescheid": Official decision. Action: "respond" or "file".
+GERMAN DOCUMENT MASTER INDEX:
+1. "Heil- und Kostenplan" / "Zuschuss": Subsidy approval. NOT A BILL. Intent: CREDIT. Action: file. Note: User must act ONLY after treatment.
+2. "Steuerbescheid": Tax assessment. Check "Nachzahlung" (Intent: DEBT, Action: pay) vs "Erstattung" (Intent: CREDIT, Action: file).
+3. "Rundfunkbeitrag": TV/Radio Tax (GEZ). Usually DEBT. Action: pay.
+4. "Mahnung" / "Vollstreckung": Overdue/Enforcement. Intent: DEBT. Urgency: overdue.
+5. "Bescheid" / "Mitteilung": Official decision. Intent: ACTION. Action: respond.
+6. "Rechnung": Bill. Intent: DEBT. Action: pay.
 
 FIELD RULES:
-- Translate ALL German terms into simple ${langName} (e.g., Dentist, Subsidy, Invoice).
-- summary: 1-2 direct sentences explaining doc purpose + timing (e.g., "Wait for X, then do Y"). NO "Location:", NO labels.
-- action_steps: Array of concrete tasks.
-- sender: Exact company name.
+- summary: 1-2 direct sentences. Translate all terms (e.g. "Dental Plan" instead of "Kostenplan").
+- action_steps: Array of simple translated tasks.
+- sender: Exact company/office (e.g. "Finanzamt", "AOK", "Vodafone").
 - main_category: Insurance, Finance, Government, Healthcare, Housing, Employment, Utility, Other.
-- action_required: pay, respond, file, attend, renew, none.
+- urgency: overdue, urgent, upcoming, informational.
 
 JSON Schema: {intent, summary, action_steps, sender, document_type, dates, money, main_category, action_required, urgency}`;
 }
@@ -48,23 +49,34 @@ export function smartSliceOCR(text, maxChars = 2500) {
   if (!text || text.length <= maxChars) return text || '';
   const sanitized = sanitizeForPrompt(text);
   const totalLen = sanitized.length;
+
   const ranges = [{ start: 0, end: 900 }, { start: totalLen - 400, end: totalLen }];
-  const keywords = ['abholung', 'pickup', 'nach abschluss', 'voraussetzung', 'termin', 'address', 'iban', 'erstatt', 'zuschuss', 'festzuschuss', 'genehmigung', 'total', 'betrag'];
+
+  // 🔍 ENHANCED KEYWORDS: Catching critical German admin labels
+  const keywords = [
+    'abholung', 'pickup', 'nach abschluss', 'voraussetzung', 'termin', 'fris',
+    'iban', 'erstatt', 'zuschuss', 'festzuschuss', 'bescheid', 'rechnung', 'mahnung',
+    'nachzahlung', 'gesamtbetrag', 'summe', 'fällig', 'überweisen', 'kassenzeichen',
+    'aktenzeichen', 'steuernummer', 'rundfunkbeitrag', 'beitragsservice'
+  ];
+
   const bodyText = sanitized.slice(900, -400);
   const bodyOffset = 900;
   let zoneCount = 0;
+
   keywords.forEach(kw => {
-    if (zoneCount >= 6) return;
+    if (zoneCount >= 7) return;
     const regex = new RegExp(kw, 'gi');
     let match;
-    while ((match = regex.exec(bodyText)) !== null && zoneCount < 6) {
-      const start = Math.max(0, match.index - 100) + bodyOffset;
-      const end = Math.min(bodyText.length, match.index + 200) + bodyOffset;
+    while ((match = regex.exec(bodyText)) !== null && zoneCount < 7) {
+      const start = Math.max(0, match.index - 120) + bodyOffset;
+      const end = Math.min(bodyText.length, match.index + 220) + bodyOffset;
       ranges.push({ start, end });
       zoneCount++;
-      regex.lastIndex += 400;
+      regex.lastIndex += 350;
     }
   });
+
   const merged = mergeRanges(ranges);
   let result = "";
   for (const range of merged) {
@@ -78,7 +90,7 @@ export function smartSliceOCR(text, maxChars = 2500) {
 export function buildUserMessage(ocrText, language) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nAnalyze doc. Output ${langName} JSON. No labels. No preamble.`;
+  return `<document>\n${smartSliceOCR(ocrText, 2500)}\n</document>\n\nOutput ${langName} JSON. No preamble. Direct facts only.`;
 }
 
 export function parseAIResponse(raw) {
@@ -90,6 +102,8 @@ export function parseAIResponse(raw) {
 
   // 🛡️ PRE-PARSER SENDER FIX
   if (lowerRaw.includes("aok bayern") || lowerRaw.includes("aok - postfach")) result.sender = "AOK Bayern";
+  else if (lowerRaw.includes("rundfunkbeitrag") || lowerRaw.includes("beitragsservice")) result.sender = "Beitragsservice (GEZ)";
+  else if (lowerRaw.includes("finanzamt")) result.sender = "Finanzamt";
   else if (lowerRaw.includes("aok")) result.sender = "AOK";
 
   let cleanRaw = raw.replace(/\*\*/g, '').replace(/```json/g, '').replace(/```/g, '').trim();
@@ -150,7 +164,7 @@ export function parseAIResponse(raw) {
   });
   result.summary = summary.replace(/\{[\s\S]*?\}|\[[\s\S]*?\]/g, '').trim() || "No summary available.";
 
-  // 3. ACTION STEPS (Split sentences into bullets if needed)
+  // 3. ACTION STEPS
   const rawSteps = findKeyInObj(jsonParsed, ['actionsteps', 'steps']) || getFuzzy(/(?:Action Steps|What to do|Steps|Important Notes):\s*([\s\S]*?)(?:Exact Address|Contact|JSON|$)/i);
   let steps = Array.isArray(rawSteps) ? rawSteps : (rawSteps ? String(rawSteps).split(/(?<=[.!?])\s+/) : []);
 
@@ -179,12 +193,32 @@ export function parseAIResponse(raw) {
   }
   result.action_required = act;
 
-  // 🛡️ SUBSIDY/HEALTHCARE OVERRIDE (DETERMINISTIC)
-  if (lowerRaw.includes('kostenplan') || lowerRaw.includes('zuschuss') || lowerRaw.includes('genehmigung') || result.sender.includes('AOK')) {
+  // 🛡️ DOMAIN-SPECIFIC REFINEMENTS (DETERMINISTIC)
+
+  // A. AOK / Healthcare
+  if (lowerRaw.includes('kostenplan') || lowerRaw.includes('zuschuss') || result.sender.includes('AOK')) {
     result.intent = 'CREDIT';
     result.action_required = 'file';
     result.document_type = lowerRaw.includes('kostenplan') ? 'cost_approval' : 'notice';
     result.main_category = 'Healthcare';
+  }
+
+  // B. Finanzamt / Taxes
+  if (lowerRaw.includes('finanzamt') || lowerRaw.includes('steuerbescheid')) {
+    result.main_category = 'Government';
+    if (lowerRaw.includes('nachzahlung') || lowerRaw.includes('zahlen sie bitte')) {
+        result.intent = 'DEBT';
+        result.action_required = 'pay';
+    } else if (lowerRaw.includes('erstattung') || lowerRaw.includes('guthaben')) {
+        result.intent = 'CREDIT';
+        result.action_required = 'file';
+    }
+  }
+
+  // C. GEZ / Beitragsservice
+  if (lowerRaw.includes('rundfunkbeitrag') || lowerRaw.includes('beitragsservice')) {
+    result.main_category = 'Utility';
+    result.action_required = lowerRaw.includes('lastschrift') ? 'file' : 'pay';
   }
 
   // 5. MONEY & DATES
