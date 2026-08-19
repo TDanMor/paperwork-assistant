@@ -61,9 +61,8 @@ export async function resetEngineState() {
  * Returns the token count for a given text.
  */
 export async function getTokenCount(text) {
-  if (!isModelLoaded()) {
-    // 🛡️ Claude Audit Implementation: Conservative fallback if engine isn't ready
-    // Using 3.2 chars/token as a more accurate floor for German compound words.
+  if (!isModelLoaded() || typeof engine.tokenize !== 'function') {
+    // 🛡️ Fallback if engine isn't ready or doesn't support tokenize
     return Math.ceil(text.length / 3.2);
   }
   try {
@@ -75,7 +74,7 @@ export async function getTokenCount(text) {
   }
 }
 
-export async function chat(systemPrompt, userMessage, assistantPrefill = '') {
+export async function chat(systemPrompt, userMessage) {
   if (!engine) throw new Error("Model not loaded");
   if (isProcessing) throw new Error("AI is already busy with another document.");
 
@@ -92,15 +91,11 @@ export async function chat(systemPrompt, userMessage, assistantPrefill = '') {
       { role: "user", content: userMessage }
     ];
 
-    if (assistantPrefill) {
-      messages.push({ role: "assistant", content: assistantPrefill });
-    }
-
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
       max_tokens: 450,
-      response_format: { type: 'json_object' } // 🛡️ Claude Audit Implementation: Force JSON mode
+      response_format: { type: 'json_object' }
     });
 
     const content = reply.choices[0].message.content;

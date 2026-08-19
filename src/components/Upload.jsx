@@ -60,25 +60,20 @@ export default function Upload() {
 
             const sys = buildSystemPrompt(state.language);
 
-            // 🛡️ Claude Audit Implementation: Token-Aware Slicing
-            // We start with a larger slice and trim if token count is too high.
+            // 🛡️ Token-Aware Slicing
             let text = smartSliceOCR(ocrText, 4000);
             const tokens = await getTokenCount(text);
-            const TOKEN_BUDGET = 1300; // Calibrated for 2048 ctx window
+            const TOKEN_BUDGET = 1300;
 
             if (tokens > TOKEN_BUDGET) {
-              // Fallback to more conservative slice if tokens are heavy (e.g. German legal)
               text = smartSliceOCR(ocrText, 2500);
             }
 
             const user = buildUserMessage(text, state.language);
 
-            // 🛡️ Claude Audit Implementation: Pre-fill with "intent" to force classification first
-            const raw  = await chat(sys, user, '{"intent":');
-
-            // Re-attach the pre-fill for parsing
-            const fullRaw = raw.startsWith('{') ? raw : '{"intent":' + raw;
-            aiData = parseAIResponse(fullRaw);
+            // Reverted assistant pre-fill as it violates WebLLM message order rules
+            const raw  = await chat(sys, user);
+            aiData = parseAIResponse(raw);
 
             wasAiSuccess = true;
             break;
