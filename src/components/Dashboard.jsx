@@ -1,6 +1,7 @@
 ﻿import React, { useContext, useState } from 'react';
 import { AppContext } from '../App.jsx';
 import TaskTile from './TaskTile.jsx';
+import GpuGuard from './GpuGuard.jsx';
 import { t } from '../i18n/index.js';
 
 const URGENCY_ORDER = ['overdue', 'urgent', 'upcoming', 'informational'];
@@ -42,6 +43,8 @@ export default function Dashboard() {
   return (
     <div className="page-container" style={{ maxWidth: '100%' }}>
       <h1 className="page-title">{t('dashboard.title')}</h1>
+
+      <GpuGuard />
 
       {/* Intuitive Human Summary Banner */}
       <div style={{ padding: '1rem 1.25rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>

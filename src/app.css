@@ -516,6 +516,39 @@ body {
   .detail-table__label   { width: 45%; }
 }
 /* ============================================================
+   GPU GUARD
+============================================================ */
+.gpu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--c-informational-bg);
+  border: 1px solid var(--c-informational);
+  border-radius: 999px;
+  color: var(--c-informational);
+  font-size: 0.85rem;
+}
+.gpu-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--c-informational);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+.gpu-separator {
+  color: var(--muted);
+  opacity: 0.5;
+}
+.gpu-banner--limited { border-left: 4px solid var(--c-urgent) !important; }
+.gpu-banner--unavailable { border-left: 4px solid var(--c-overdue) !important; }
+
+/* ============================================================
    KANBAN BOARD
 ============================================================ */
 .kanban-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; align-items: flex-start; }
