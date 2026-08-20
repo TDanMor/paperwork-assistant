@@ -307,7 +307,7 @@ export function extractFacts(ocrText) {
     for (let i = 0; i < Math.min(10, lines.length); i++) {
         const line = lines[i].trim();
         // Require uppercase start, avoid matching "on i AG" or random lowercase noise
-        const match = line.match(/(?:^|\s)([A-ZÄÖÜ][\w\s&-]{1,40})\b(GmbH|UG|e\.K\.|AG|KG|OHG)\b/i);
+        const match = line.match(/(?:^|\s)([A-ZÄÖÜ][\w\s&-]{1,40})\b(GmbH|UG|e\.K\.|AG|KG|OHG|gmbh|ug|ag|kg|ohg)\b/);
         if (match) {
             let potential = match[0].trim();
             potential = potential.replace(/^absender:?\s*/i, '').replace(/^[,.-]+/, '').trim();
