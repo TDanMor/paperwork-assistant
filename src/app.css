@@ -810,37 +810,58 @@ body {
 }
 
 /* ============================================================
-   GPU GUARD
+   HARDWARE SENTINEL
 ============================================================ */
-.gpu-badge {
-  display: inline-flex;
+.sentinel-badge {
+  display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  background: var(--c-informational-bg);
-  border: 1px solid var(--c-informational);
-  border-radius: 999px;
-  color: var(--c-informational);
-  font-size: 0.85rem;
+  gap: 0.4rem;
+  padding: 0.3rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
 }
-.gpu-dot {
-  width: 8px;
-  height: 8px;
-  background: var(--c-informational);
-  border-radius: 50%;
-  animation: pulse 2s infinite;
+
+.sentinel-badge:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
-@keyframes pulse {
-  0% { transform: scale(0.9); opacity: 0.7; }
-  50% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(0.9); opacity: 0.7; }
+
+.sentinel-dot {
+  font-size: 0.7rem;
+  line-height: 1;
 }
-.gpu-separator {
-  color: var(--muted);
-  opacity: 0.5;
+
+.sentinel-badge--ready .sentinel-dot { color: var(--c-informational); animation: pulse-ready 3s infinite; }
+.sentinel-badge--limited .sentinel-dot { color: var(--c-urgent); animation: pulse-issue 1.5s infinite; }
+.sentinel-badge--unavailable .sentinel-dot { color: var(--c-overdue); animation: pulse-issue 1s infinite; }
+.sentinel-badge--checking .sentinel-dot { color: var(--muted); opacity: 0.5; }
+
+@keyframes pulse-ready {
+  0% { opacity: 0.6; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0.6; transform: scale(0.9); }
 }
-.gpu-banner--limited { border-left: 4px solid var(--c-urgent) !important; }
-.gpu-banner--unavailable { border-left: 4px solid var(--c-overdue) !important; }
+
+@keyframes pulse-issue {
+  0% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0.4; transform: scale(0.85); }
+}
+
+@media (max-width: 580px) {
+  .sentinel-label { display: none; }
+  .sentinel-badge { padding: 0.3rem; min-width: auto; }
+}
+
+/* ============================================================
+   GPU GUARD (Legacy - keep for structural safety)
+============================================================ */
 
 /* ============================================================
    KANBAN BOARD

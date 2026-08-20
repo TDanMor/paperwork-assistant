@@ -2,6 +2,7 @@
 import { AppContext } from '../App.jsx';
 import { t } from '../i18n/index.js';
 import LangSwitcher from './LangSwitcher.jsx';
+import GpuGuard from './GpuGuard.jsx';
 import { activeModelId, MODELS, setActiveModel } from '../ai/engine.js';
 
 const NAV_ITEMS = [
@@ -78,6 +79,8 @@ export default function NavBar() {
             </div>
           </div>
         </div>
+
+        <GpuGuard />
 
         <LangSwitcher variant="compact" />
       </div>

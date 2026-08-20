@@ -53,8 +53,6 @@ export default function Dashboard() {
     <div className="page-container" style={{ maxWidth: '100%' }}>
       <h1 className="page-title">{t('dashboard.title')}</h1>
 
-      <GpuGuard />
-
       {/* Intuitive Human Summary Banner */}
       <div className="summary-banner" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
         <span style={{ fontSize: '1.5rem' }}>💡</span>

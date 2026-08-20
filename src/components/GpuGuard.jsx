@@ -1,163 +1,124 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { t } from '../i18n/index.js';
 
 export default function GpuGuard() {
   const [state, setState] = useState({
     loading: true,
-    webgl: {
-      available: false,
-      hardwareAccelerated: false,
-      rendererClass: 'unknown'
-    },
-    webgpu: {
-      available: false,
-      adapterAvailable: false
-    },
+    webgl: { available: false, hardwareAccelerated: false },
+    webgpu: { available: false, adapterAvailable: false },
     overallStatus: 'checking'
   });
 
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
   const checkGpu = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true, overallStatus: 'checking' }));
-
     const webgpu = { available: false, adapterAvailable: false };
-    const webgl = { available: false, hardwareAccelerated: false, rendererClass: 'unknown' };
+    const webgl = { available: false, hardwareAccelerated: false };
 
-    // 1. WebGPU Detection
     if ('gpu' in navigator) {
-      webgpu.available = true;
       try {
         const adapter = await navigator.gpu.requestAdapter();
         webgpu.adapterAvailable = !!adapter;
-      } catch (e) {
-        webgpu.adapterAvailable = false;
-      }
+      } catch (e) {}
     }
 
-    // 2. WebGL Detection
     const canvas = document.createElement('canvas');
     let gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-
     if (gl) {
       webgl.available = true;
       const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
       if (debugInfo) {
         const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '';
-        const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || '';
-
-        // Software renderer detection heuristics
-        const isSoftware = /software|llvmpipe|google swiftshader|mesa/i.test(renderer) || /microsoft/i.test(vendor);
-        webgl.hardwareAccelerated = !isSoftware;
-        webgl.rendererClass = isSoftware ? 'software' : 'hardware';
+        webgl.hardwareAccelerated = !/software|llvmpipe|swiftshader/i.test(renderer);
       }
     }
 
-    // 3. Overall Status Logic
     let overallStatus = 'unavailable';
-    if (webgpu.adapterAvailable) {
-      overallStatus = 'ready';
-    } else if (webgl.available && webgl.hardwareAccelerated) {
-      overallStatus = 'limited';
-    }
+    if (webgpu.adapterAvailable) overallStatus = 'ready';
+    else if (webgl.available && webgl.hardwareAccelerated) overallStatus = 'limited';
 
-    setState({
-      loading: false,
-      webgl,
-      webgpu,
-      overallStatus
-    });
+    setState({ loading: false, webgl, webgpu, overallStatus });
   }, []);
 
   useEffect(() => {
     checkGpu();
+    const handleVisibility = () => { if (document.visibilityState === 'visible') checkGpu(); };
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        checkGpu();
-      }
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
     };
+    document.addEventListener('mousedown', handleClickOutside);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, [checkGpu]);
 
+  if (state.loading) return <div className="sentinel-badge sentinel-badge--checking"><span>●</span></div>;
+
   const isWindows = /Win/i.test(navigator.platform || navigator.userAgentData?.platform || '');
-
-  if (state.loading) {
-    return (
-      <div style={{ minHeight: '42px', display: 'flex', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <p className="muted" style={{ fontSize: '0.85rem' }}>{t('gpu.checking')}</p>
-      </div>
-    );
-  }
-
-  if (state.overallStatus === 'ready') {
-    return (
-      <div className="gpu-badge gpu-badge--ready" style={{ marginBottom: '1.5rem' }}>
-        <span className="gpu-dot"></span>
-        <span style={{ fontWeight: 600 }}>{t('gpu.ready_title')}</span>
-        <span className="gpu-separator">·</span>
-        <span className="muted" style={{ fontSize: '0.85rem' }}>{t('gpu.ready_subtitle')}</span>
-      </div>
-    );
-  }
+  const hasIssue = state.overallStatus !== 'ready';
 
   return (
-    <div
-      className={`gpu-banner gpu-banner--${state.overallStatus}`}
-      style={{ marginBottom: '1.5rem', padding: '1rem', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--surface)', boxShadow: 'var(--shadow-sm)' }}
-    >
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '1.5rem' }}>{state.overallStatus === 'limited' ? '⚠️' : '❌'}</span>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.25rem' }}>
-            {state.overallStatus === 'limited' ? t('gpu.limited_title') : t('gpu.unavailable_title')}
+    <div className="perf-toggle-container" ref={menuRef}>
+      <button
+        className={`sentinel-badge sentinel-badge--${state.overallStatus}`}
+        onClick={() => setShowMenu(!showMenu)}
+        title={t(`gpu.${state.overallStatus}_title`)}
+      >
+        <span className="sentinel-dot">●</span>
+        <span className="sentinel-label">
+          {state.overallStatus === 'ready' ? t('gpu.ready_title').split(' ')[1] : t('gpu.action_required').split(' ')[1]}
+        </span>
+      </button>
+
+      {showMenu && (
+        <div className="perf-dropdown-menu" style={{ display: 'block', width: '280px', padding: '1rem' }}>
+          <h3 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            {hasIssue ? '⚠️' : '✅'} {t(`gpu.${state.overallStatus}_title`)}
           </h3>
-          <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>
-            {state.overallStatus === 'limited' ? t('gpu.limited_subtitle') : t('gpu.unavailable_subtitle')}
+          <p className="muted" style={{ fontSize: '0.75rem', marginBottom: '1rem', lineHeight: '1.4' }}>
+             {t(`gpu.${state.overallStatus}_subtitle`)}
           </p>
 
-          <div style={{ display: 'flex', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ fontSize: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', padding: '0.5rem', background: 'var(--bg)', borderRadius: '4px' }}>
+            <div style={{ fontSize: '0.65rem' }}>
               <strong style={{ display: 'block' }}>{t('gpu.webgpu')}</strong>
               <span style={{ color: state.webgpu.adapterAvailable ? 'var(--c-informational)' : 'var(--c-overdue)' }}>
                 {state.webgpu.adapterAvailable ? t('gpu.available') : t('gpu.unavailable')}
               </span>
             </div>
-            <div style={{ fontSize: '0.75rem' }}>
+            <div style={{ fontSize: '0.65rem' }}>
               <strong style={{ display: 'block' }}>{t('gpu.webgl')}</strong>
               <span style={{ color: state.webgl.hardwareAccelerated ? 'var(--c-informational)' : 'var(--c-overdue)' }}>
-                {state.webgl.hardwareAccelerated ? t('gpu.hardware_accelerated') : t('gpu.software_rendering')}
+                {state.webgl.hardwareAccelerated ? t('gpu.available') : t('gpu.unavailable')}
               </span>
             </div>
           </div>
 
-          {isWindows ? (
-            <div className="gpu-recovery" style={{ background: 'var(--bg)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '0.75rem' }}>⚡ {t('gpu.action_required')}</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.8rem', marginBottom: '1rem' }}>
-                <div><strong>{t('gpu.step_1')}:</strong> {t('gpu.step_1_desc')}</div>
-                <div><strong>{t('gpu.step_2')}:</strong> {t('gpu.step_2_desc')}</div>
-                <div><strong>{t('gpu.step_3')}:</strong> {t('gpu.step_3_desc')}</div>
+          {hasIssue && isWindows && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+              <h4 style={{ fontSize: '0.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>⚡ {t('gpu.action_required')}</h4>
+              <div style={{ fontSize: '0.7rem', display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.75rem' }}>
+                <div>1. {t('gpu.step_1_desc')}</div>
+                <div>2. {t('gpu.step_2_desc')}</div>
+                <div>3. {t('gpu.step_3_desc')}</div>
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <a href="/Deploy-GPU.bat" download className="btn btn-primary btn-sm">
-                  {t('gpu.download_fix')}
-                </a>
-                <button onClick={checkGpu} className="btn btn-outline btn-sm">
-                  {t('gpu.check_again')}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div>
-               <p style={{ fontSize: '0.8rem', color: 'var(--c-urgent)' }}>{t('gpu.mobile_limitation')}</p>
-               <button onClick={checkGpu} className="btn btn-outline btn-sm" style={{ marginTop: '0.75rem' }}>
-                  {t('gpu.check_again')}
-                </button>
+              <a href="/Deploy-GPU.bat" download className="btn btn-primary btn-sm" style={{ width: '100%', marginBottom: '0.5rem' }}>
+                {t('gpu.download_fix')}
+              </a>
             </div>
           )}
+
+          <button onClick={() => { checkGpu(); setShowMenu(false); }} className="btn btn-outline btn-sm" style={{ width: '100%' }}>
+            {t('gpu.check_again')}
+          </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }

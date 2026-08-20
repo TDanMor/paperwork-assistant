@@ -69,12 +69,9 @@ export default function ModelLoader() {
   }
 
   if (modelStatus === 'error') {
-    return (
-      <div className="model-banner model-banner--error">
-        <span>⚠️ {t('model.error')}: {modelMessage}</span>
-        <button className="btn btn-outline btn-sm" onClick={handleLoad}>{t('model.retry')}</button>
-      </div>
-    );
+    // 🛡️ Technical errors are suppressed from the main view.
+    // They are now reflected in the NavBar "Hardware Sentinel" status dot.
+    return null;
   }
 
   return null; 
