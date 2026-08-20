@@ -1,4 +1,4 @@
-﻿import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { AppContext }      from '../App.jsx';
 import { getDocumentById, deleteDocument, updateDocument } from '../storage/db.js';
 import { generateGoogleCalendarUrl } from '../utils/calendar.js';
@@ -107,7 +107,7 @@ export default function DocumentDetail({ docId }) {
               <tbody>
                 <Row label={t('detail.sender')}   value={doc.sender}        bold />
                 <Row label={t('detail.type')}     value={doc.document_type} />
-                <Row label={t('detail.category')} value={`${t(`categories.${doc.main_category}`)} › ${t(`categories.${doc.sub_category}`)}`} />
+                <Row label={t('detail.category')} value={doc.sub_category ? `${t(`categories.${doc.main_category}`)} › ${t(`categories.${doc.sub_category}`)}` : t(`categories.${doc.main_category}`)} />
                 {doc.dates?.document_date && <Row label={t('detail.date')} value={doc.dates.document_date} />}
                 {doc.dates?.due_date && <Row label={t('detail.due_date')} value={doc.dates.due_date} bold />}
                 {doc.money?.amount != null && (

@@ -1,4 +1,4 @@
-﻿import { smartSliceOCR } from './extractor.js'; // We'll move the slicer there for better logic
+import { smartSliceOCR } from './extractor.js'; // We'll move the slicer there for better logic
 
 export function buildSystemPrompt(language, attentionModel) {
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
@@ -55,6 +55,7 @@ export function parseAIResponse(raw, attentionModel) {
     action_steps: jsonParsed.action_steps_explanation || attentionModel.facts.actions.map(a => a.reason),
     document_type: attentionModel.facts.polarity_overall === 'nachzahlung' ? 'invoice' : 'notice',
     main_category: attentionModel.facts.sender.includes('AOK') ? 'Healthcare' : 'Finance',
+    sub_category: 'Other',
     money: {
       amount: attentionModel.facts.amounts[0]?.value || null,
       currency: 'EUR'
@@ -75,7 +76,7 @@ export function getFallbackData() {
     sender: 'Unknown', document_type: 'other',
     dates: { document_date: null, due_date: null, appointment_date: null },
     money: { amount: null, currency: 'EUR' },
-    main_category: 'Other', action_required: 'file', urgency: 'informational',
+    main_category: 'Other', sub_category: 'Other', action_required: 'file', urgency: 'informational',
     summary: 'System processing was limited. Review extracted text manually.',
     action_steps: []
   };
