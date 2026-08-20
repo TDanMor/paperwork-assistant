@@ -234,7 +234,8 @@ export function extractFacts(ocrText) {
     { key: 'pickup_instructions', regex: /abholort|abholtermin|bereitstellung|abholung|abholen/gi },
     { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
     { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
-    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|melden sie sich/gi }
+    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|melden sie sich/gi },
+    { key: 'return_documents', regex: /unterlagen.*(senden|einreichen|zurück)|formular.*(zurück|einreichen)|bitte.*senden.*sie|nach abschluss der behandlung/gi }
   ];
 
   const activeIntents = [];
@@ -274,6 +275,7 @@ export function extractFacts(ocrText) {
   if (activeIntents.includes('pickup_instructions')) topicParts.push('a pickup or delivery appointment');
   if (activeIntents.includes('payment_request')) topicParts.push('a payment you need to make');
   if (activeIntents.includes('appointment')) topicParts.push('an appointment you need to attend');
+  if (activeIntents.includes('return_documents')) topicParts.push('submitting documents or forms');
   facts.document_topic = topicParts.length > 0 ? topicParts.join(' and ') : null;
 
   // Ensure unique nuances (internal categories)
@@ -432,6 +434,7 @@ export function extractFacts(ocrText) {
   }
 
   if (hasFuzzyKeyword(ocrText, ['termin', 'einladung'])) facts.actions.push({ key: 'attend', priority: 1, reason: 'Appointment detected' });
+  if (facts.special_intent && facts.special_intent.includes('return_documents')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Document submission requested' });
 
   return facts;
 }
