@@ -33,13 +33,12 @@ I have already verified these CORE FACTS. You MUST use them to brief the user:
 - Amount: ${facts.amounts[0]?.value || 'N/A'} EUR
 
 YOUR MISSION:
-Explain exactly what this document is about using the <document_snippets>.
-- If it's a bill, find the SERVICE PERIOD (Abrechnungszeitraum) and mention it.
-- If it's a notice, find the reason (e.g. "Missing documents", "Approval").
-- Be natural and professional. Avoid repeating the same words.
-- Write 3-4 information-dense sentences.
+Brief the user about this document in a professional way.
+1. SUMMARY: Write 3-4 detailed sentences explaining EXACTLY what this is and why it was sent. This is the narrative "briefing" of the document.
+2. ACTION STEPS: Provide a list of short, concrete commands (e.g. "Transfer 34.99€", "Call customer service at..."). Do NOT write long descriptions here. Keep them imperative and short.
+3. Use the <document_snippets> to find specific details like service periods or account IDs.
 
-Output ONLY a JSON object: { "summary": "...", "action_steps_explanation": ["..."], "reference_id_highlight": "..." }`;
+Output ONLY a JSON object: { "summary": "Detailed narrative here", "action_steps_explanation": ["Step 1", "Step 2"], "reference_id_highlight": "..." }`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
@@ -58,6 +57,7 @@ export function parseAIResponse(raw, attentionModel) {
   }
 
   const facts = attentionModel.facts;
+  const mainCat = (facts.nuances && facts.nuances[0]) ? facts.nuances[0] : 'Finance';
 
   // Merge Deterministic Facts with AI-generated narrative
   return {
@@ -66,8 +66,8 @@ export function parseAIResponse(raw, attentionModel) {
     summary: jsonParsed.summary || `Document from ${facts.sender} regarding ${facts.nuances.join(', ') || 'general matters'}.`,
     action_steps: jsonParsed.action_steps_explanation || facts.actions.map(a => a.reason),
     document_type: facts.polarity_overall === 'nachzahlung' ? 'invoice' : (facts.legal_remedy.present ? 'notice' : 'other'),
-    main_category: facts.nuances[0] || 'Finance',
-    sub_category: facts.doc_stage,
+    main_category: mainCat,
+    sub_category: facts.doc_stage || 'other',
     money: {
       amount: facts.amounts[0]?.value || null,
       currency: 'EUR',
