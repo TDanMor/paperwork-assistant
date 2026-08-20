@@ -53,10 +53,10 @@ export default function NavBar() {
           <div className="perf-dropdown-wrapper">
             <div className="perf-trigger">
               <span className="perf-current-title">
-                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.lite_title') : t('settings.pro_title')}
+                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.lite_mode_title') : t('settings.pro_mode_title')}
               </span>
               <span className="perf-current-subtitle">
-                {isLite ? t('settings.lite_vram') : t('settings.pro_vram')}
+                {isLite ? t('settings.lite_mode_vram') : t('settings.pro_mode_vram')}
               </span>
             </div>
             <div className="perf-dropdown-menu">
@@ -64,17 +64,17 @@ export default function NavBar() {
                 className={`perf-option ${!isLite ? 'perf-option--active' : ''}`}
                 onClick={() => isLite && handleModeChange({ target: { value: 'pro' } })}
               >
-                <span className="perf-title">🏆 {t('settings.pro_title')}</span>
-                <span className="perf-desc">{t('settings.pro_desc')}</span>
-                <span className="perf-vram">{t('settings.pro_vram')}</span>
+                <span className="perf-title">🏆 {t('settings.pro_mode_title')}</span>
+                <span className="perf-desc">{t('settings.pro_mode_desc')}</span>
+                <span className="perf-vram">{t('settings.pro_mode_vram')}</span>
               </button>
               <button
                 className={`perf-option ${isLite ? 'perf-option--active' : ''}`}
                 onClick={() => !isLite && handleModeChange({ target: { value: 'lite' } })}
               >
-                <span className="perf-title">⚡ {t('settings.lite_title')}</span>
-                <span className="perf-desc">{t('settings.lite_desc')}</span>
-                <span className="perf-vram">{t('settings.lite_vram')}</span>
+                <span className="perf-title">⚡ {t('settings.lite_mode_title')}</span>
+                <span className="perf-desc">{t('settings.lite_mode_desc')}</span>
+                <span className="perf-vram">{t('settings.lite_mode_vram')}</span>
               </button>
             </div>
           </div>
