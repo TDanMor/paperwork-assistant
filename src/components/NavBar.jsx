@@ -1,6 +1,7 @@
 ﻿import React, { useContext } from 'react';
 import { AppContext } from '../App.jsx';
 import { t } from '../i18n/index.js';
+import LangSwitcher from './LangSwitcher.jsx';
 
 const NAV_ITEMS = [
   { view: 'dashboard', icon: '📊', labelKey: 'nav.dashboard' },
@@ -27,7 +28,10 @@ export default function NavBar() {
           </button>
         ))}
       </div>
-      <span className="navbar-version">v:{__APP_VERSION__}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <LangSwitcher variant="compact" />
+        <span className="navbar-version">v:{__APP_VERSION__}</span>
+      </div>
     </nav>
   );
 }

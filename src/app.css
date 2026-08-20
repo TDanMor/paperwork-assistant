@@ -516,6 +516,36 @@ body {
   .detail-table__label   { width: 45%; }
 }
 /* ============================================================
+   LANGUAGE SWITCHER
+============================================================ */
+.lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.lang-switcher-compact {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lang-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.lang-select:focus {
+  border-color: var(--primary);
+}
+
+/* ============================================================
    GPU GUARD
 ============================================================ */
 .gpu-badge {

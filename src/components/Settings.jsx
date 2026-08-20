@@ -3,6 +3,7 @@ import { AppContext }      from '../App.jsx';
 import { loadModel, MODELS, activeModelId, setActiveModel } from '../ai/engine.js';
 import { getAllDocuments, clearAllDocuments, saveDocument }   from '../storage/db.js';
 import { t } from '../i18n/index.js';
+import LangSwitcher from './LangSwitcher.jsx';
 
 export default function Settings() {
   const { state, dispatch } = useContext(AppContext);
@@ -120,7 +121,7 @@ export default function Settings() {
     if (confirmText !== t('settings.reset_confirm_phrase')) return;
     await clearAllDocuments();
     dispatch({ type: 'SET_DOCUMENTS', documents: [] });
-    localStorage.removeItem('pa_lang');
+    // 🛡️ FIX: Remove language reset so it stays in current language
     localStorage.removeItem('ai_model_cached');
     alert(t('settings.reset_done'));
     setConfirmText('');
@@ -134,13 +135,7 @@ export default function Settings() {
       <section className="settings-card">
         <h2>🌐 {t('settings.language')}</h2>
         <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>{t('settings.language_subtitle')}</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
-          <button className={`btn ${state.language === 'en' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'en' })}>🇬🇧 English</button>
-          <button className={`btn ${state.language === 'de' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'de' })}>🇩🇪 Deutsch</button>
-          <button className={`btn ${state.language === 'es' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'es' })}>🇪🇸 Español</button>
-          <button className={`btn ${state.language === 'fr' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'fr' })}>🇫🇷 Français</button>
-          <button className={`btn ${state.language === 'ro' ? 'btn-primary' : 'btn-outline'}`} onClick={() => dispatch({ type:'SET_LANGUAGE', payload:'ro' })}>🇷🇴 Română</button>
-        </div>
+        <LangSwitcher />
       </section>
 
       {/* AI Model */}

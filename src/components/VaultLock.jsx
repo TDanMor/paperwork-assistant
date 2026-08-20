@@ -3,6 +3,7 @@ import { AppContext } from '../App.jsx';
 import { setSessionKey, getAllDocuments, getVaultSalt, verifyVaultPIN } from '../storage/db.js';
 import { deriveKeyFromPin } from '../utils/crypto.js';
 import { t } from '../i18n/index.js';
+import LangSwitcher from './LangSwitcher.jsx';
 
 export default function VaultLock() {
   const { dispatch } = useContext(AppContext);
@@ -57,9 +58,15 @@ export default function VaultLock() {
   };
 
   return (
-    <div className="status-card" style={{ maxWidth: '400px', margin: '4rem auto' }}>
+    <div className="status-card" style={{ maxWidth: '500px', margin: '4rem auto' }}>
       <div className="result-card__icon">🔐</div>
       <h2>{t('vault.title')}</h2>
+
+      <div style={{ margin: '1.5rem 0', padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+        <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.75rem', textAlign: 'center' }}>{t('settings.language')}</p>
+        <LangSwitcher />
+      </div>
+
       <p className="muted" style={{ fontSize: '0.85rem' }}>{t('vault.description')}</p>
 
       <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
