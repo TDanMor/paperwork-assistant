@@ -21,11 +21,12 @@ Factual Context:
 - Action Location: ${facts.addresses.action || 'Not specified'}
 
 Your job is only to EXPLAIN these facts to the user in simple ${langName}.
+CRITICAL: You MUST use the facts provided. Do NOT hallucinate a different Sender or Action.
 Rules:
-1. Explain WHAT this is (e.g. ${facts.doc_stage}).
-2. Explain the legal weight (Is it a court order? A friendly reminder?).
+1. Explain WHAT this is (e.g. ${facts.doc_stage} from ${facts.sender}).
+2. Explain the legal weight and required action (${attentionModel.primaryAction}).
 3. Mention any attachments or action locations found.
-4. If amount has changed historically, point this out.
+4. If it's a bill, remind the user of the amount: ${facts.amounts[0]?.value || 'see details'}.
 5. Do NOT change the actions or numbers.
 5. Output ONLY a FLAT JSON object.
 
