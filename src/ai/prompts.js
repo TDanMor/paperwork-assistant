@@ -16,7 +16,7 @@ Factual Context:
 - Primary Action: ${attentionModel.primaryAction}
 - Multiple Obligations: [${actionsStr}]
 - Appeal Possible: ${remedyStr}
-- Attachments found: ${facts.attachments.length}
+- Attachments found: ${facts.attachments?.length || 0}
 - Historical Change: ${attentionModel.amountChanged ? 'Yes (Amount has changed from previous doc)' : 'No'}
 - Action Location: ${facts.addresses.action || 'Not specified'}
 

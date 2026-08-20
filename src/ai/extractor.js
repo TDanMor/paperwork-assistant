@@ -61,9 +61,14 @@ function harvestTableMath(ocrText) {
     const amountRegex = /(\d{1,3}(?:\.\d{3})*(?:,\d{2}))/g;
     const matches = ocrText.match(amountRegex) || [];
     const values = matches.map(parseEuro);
-    for (let i = 0; i < values.length - 2; i++) {
-        const a = values[i], b = values[i+1], c = values[i+2];
-        if (Math.abs((a + b) - c) < 0.05 && a > 0 && b > 0) return { net: a, tax: b, gross: c };
+    // Sliding window of 5 to find A+B=C even with text in between
+    for (let i = 0; i < values.length; i++) {
+        for (let j = i + 1; j < Math.min(i + 4, values.length); j++) {
+            for (let k = j + 1; k < Math.min(j + 4, values.length); k++) {
+                const a = values[i], b = values[j], c = values[k];
+                if (Math.abs((a + b) - c) < 0.05 && a > 0 && b > 0) return { net: a, tax: b, gross: c };
+            }
+        }
     }
     return null;
 }
@@ -99,8 +104,18 @@ export function extractFacts(ocrText) {
     legal_remedy: { present: false, type: null },
     risk_flags: { is_court_order: false, sender_looks_official: false },
     table: harvestTableMath(ocrText),
-    addresses: harvestAddresses(ocrText, lines)
+    addresses: harvestAddresses(ocrText, lines),
+    attachments: []
   };
+
+  // Attachment Detection
+  if (hasFuzzyKeyword(ocrText, ['anlage', 'anlagen', 'beigefügt', 'anhang'])) {
+    lines.forEach(line => {
+      if (line.toLowerCase().includes('anlage') || line.toLowerCase().includes('anhang')) {
+        if (line.length < 80) facts.attachments.push(line.trim());
+      }
+    });
+  }
 
   // Sender Logic
   const commonSenders = ["AOK", "TK", "Barmer", "Finanzamt", "Jobcenter", "Vodafone", "Telekom", "Stadtwerke", "Beitragsservice", "Rundfunkbeitrag", "Rentenversicherung", "ADAC", "Restlos"];

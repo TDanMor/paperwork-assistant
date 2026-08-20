@@ -1,4 +1,4 @@
-﻿{
+{
   "app_title": "Asistent Documente",
   "nav": {
     "dashboard": "Panou",
@@ -112,12 +112,12 @@
     "language": "Limba Interfeței",
     "language_subtitle": "Alegeți limba preferată pentru rezumate și analiza.",
     "perf_mode": "Mod de performanță",
-    "pro_mode_title": "Mod Pro",
-    "pro_mode_desc": "Cea mai bună acuratețe",
-    "pro_mode_vram": "Necesită 4GB+ VRAM & 16GB RAM",
-    "lite_mode_title": "Mod Lite",
-    "lite_mode_desc": "Stabilitate ridicată",
-    "lite_mode_vram": "Perfect pentru telefoane, tablete & 8GB RAM",
+    "pro_title": "Mod Pro",
+    "pro_desc": "Cea mai bună acuratețe",
+    "pro_vram": "Necesită 4GB+ VRAM & 16GB RAM",
+    "lite_title": "Mod Lite",
+    "lite_desc": "Stabilitate ridicată",
+    "lite_vram": "Perfect pentru telefoane, tablete & 8GB RAM",
     "mode_confirm": "Schimbarea modului necesită reîncărcarea datelor (~1-2 GB). Continuați?",
     "switched_msg": "Mod schimbat. Gata pentru reîncărcare.",
     "model_status": "Status",

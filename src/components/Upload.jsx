@@ -1,4 +1,4 @@
-﻿import React, { useContext, useState, useRef } from 'react';
+import React, { useContext, useState, useRef } from 'react';
 import { AppContext }       from '../App.jsx';
 import { processFile }      from '../ocr/processor.js';
 import { isModelLoaded, chat, getTokenCount } from '../ai/engine.js';
