@@ -321,21 +321,28 @@ export function extractFacts(ocrText) {
     // 2. Fallback to Address Harvester's Sender Cluster
     if (!recoveredSender && facts.addresses.sender_lines) {
         const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-zA-Z]?/;
+        
+        // Pass 1: Look specifically for a single-line return address (Rücksendeangabe)
         for (const line of facts.addresses.sender_lines) {
             let cleanLine = line.trim().replace(/^absender:?\s*/i, '').replace(/,+$/, '').trim();
-            
-            // If it's a single-line address with commas, take the first part
             if (cleanLine.includes(',') && /\b\d{5}\b/.test(cleanLine)) {
                 recoveredSender = cleanLine.split(',')[0].trim();
                 break;
             }
+        }
 
-            if (/\b\d{5}\b/.test(cleanLine)) continue; // Skip standalone postal code lines
-            if (streetRegex.test(cleanLine)) continue; // Skip standalone street lines
-            
-            if (cleanLine.length > 2) {
-                recoveredSender = cleanLine;
-                break;
+        // Pass 2: Fallback to the first valid name-like line
+        if (!recoveredSender) {
+            for (const line of facts.addresses.sender_lines) {
+                let cleanLine = line.trim().replace(/^absender:?\s*/i, '').replace(/,+$/, '').trim();
+                
+                if (/\b\d{5}\b/.test(cleanLine)) continue; // Skip standalone postal code lines
+                if (streetRegex.test(cleanLine)) continue; // Skip standalone street lines
+                
+                if (cleanLine.length > 2) {
+                    recoveredSender = cleanLine;
+                    break;
+                }
             }
         }
     }
