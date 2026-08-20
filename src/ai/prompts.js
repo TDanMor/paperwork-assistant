@@ -31,14 +31,15 @@ I have already verified these CORE FACTS. You MUST use them to brief the user:
 - Action: ${attentionModel.primaryAction}
 - Reason/Topic: ${facts.nuances.join(", ") || 'General Correspondence'}
 - Amount: ${facts.amounts[0]?.value || 'N/A'} EUR
+- Special Intent: ${facts.special_intent || 'None'}
 
 YOUR MISSION:
 Brief the user about this document in a professional way.
 1. SUMMARY: Write 3-4 detailed sentences explaining EXACTLY what this is.
-   - For AOK: Look specifically for reimbursement details and if BANK DETAILS/IBAN need to be submitted.
-   - For RESTLOS: Look for specific PICKUP WINDOWS (Date and Time range).
-2. ACTION STEPS: Provide a list of short, concrete commands (e.g. "Send IBAN to AOK", "Place container outside by 09:00").
-3. Use the <document_snippets> to find specific details like time windows, service periods, or account IDs.
+   - If Topic includes Insurance (AOK/TK): Look specifically for dental/medical reimbursement or if bank details/IBAN need to be provided.
+   - If Special Intent is "pickup_instructions": Look for the specific time window (e.g. 09:00 - 15:00) and mention it.
+2. ACTION STEPS: Provide a list of short, concrete commands (e.g. "Send IBAN to AOK", "Place container outside").
+3. Use the <document_snippets> to find specific details like account IDs or reasons.
 
 Output ONLY a JSON object: { "summary": "Detailed narrative here", "action_steps_explanation": ["Step 1", "Step 2"], "reference_id_highlight": "..." }`;
 }
@@ -62,10 +63,16 @@ export function parseAIResponse(raw, attentionModel) {
   const mainCat = (facts.nuances && facts.nuances[0]) ? facts.nuances[0] : 'Finance';
 
   // Merge Deterministic Facts with AI-generated narrative
+  const summaryFallback = facts.special_intent === 'provide_bank_details'
+    ? `Document from ${facts.sender} regarding reimbursement. Action required: provide bank details.`
+    : facts.special_intent === 'pickup_instructions'
+    ? `Document from ${facts.sender} regarding pickup instructions.`
+    : `Document from ${facts.sender} regarding ${facts.nuances.join(', ') || 'general matters'}.`;
+
   return {
     sender: facts.sender,
     reference_numbers: facts.reference_numbers,
-    summary: jsonParsed.summary || `Document from ${facts.sender} regarding ${facts.nuances.join(', ') || 'general matters'}.`,
+    summary: jsonParsed.summary || summaryFallback,
     action_steps: jsonParsed.action_steps_explanation || facts.actions.map(a => a.reason),
     document_type: facts.polarity_overall === 'nachzahlung' ? 'invoice' : (facts.legal_remedy.present ? 'notice' : 'other'),
     main_category: mainCat,

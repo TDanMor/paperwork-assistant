@@ -204,14 +204,19 @@ export function extractFacts(ocrText) {
     Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung', 'aok', 'tk', 'barmer', 'allianz'],
     Housing: ['miete', 'nebenkosten', 'betriebskosten'],
-    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung'],
-    Special_Action: ['bankverbindung', 'kontoverbindung', 'iban mitteilen', 'abholort', 'abholtermin', 'bereitstellung', 'reimbursement', 'erstattung']
+    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung']
   };
+
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
     if (kws.some(kw => fullTextLower.includes(kw))) facts.nuances.push(cat);
   }
 
-  // Ensure unique nuances and prioritize
+  // Detect specific sub-intentions for AI guidance
+  facts.special_intent = null;
+  if (/bankverbindung|kontoverbindung|iban mitteilen/i.test(ocrText)) facts.special_intent = 'provide_bank_details';
+  if (/abholort|abholtermin|bereitstellung/i.test(ocrText)) facts.special_intent = 'pickup_instructions';
+
+  // Ensure unique nuances and prioritize Insurance for health providers
   facts.nuances = [...new Set(facts.nuances)];
   if (facts.sender.match(/AOK|TK|Barmer|Allianz/i)) {
     facts.nuances = ['Insurance', ...facts.nuances.filter(n => n !== 'Insurance')];
