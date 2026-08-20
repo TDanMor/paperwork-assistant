@@ -34,9 +34,11 @@ I have already verified these CORE FACTS. You MUST use them to brief the user:
 
 YOUR MISSION:
 Brief the user about this document in a professional way.
-1. SUMMARY: Write 3-4 detailed sentences explaining EXACTLY what this is and why it was sent. This is the narrative "briefing" of the document.
-2. ACTION STEPS: Provide a list of short, concrete commands (e.g. "Transfer 34.99€", "Call customer service at..."). Do NOT write long descriptions here. Keep them imperative and short.
-3. Use the <document_snippets> to find specific details like service periods or account IDs.
+1. SUMMARY: Write 3-4 detailed sentences explaining EXACTLY what this is.
+   - For AOK: Look specifically for reimbursement details and if BANK DETAILS/IBAN need to be submitted.
+   - For RESTLOS: Look for specific PICKUP WINDOWS (Date and Time range).
+2. ACTION STEPS: Provide a list of short, concrete commands (e.g. "Send IBAN to AOK", "Place container outside by 09:00").
+3. Use the <document_snippets> to find specific details like time windows, service periods, or account IDs.
 
 Output ONLY a JSON object: { "summary": "Detailed narrative here", "action_steps_explanation": ["Step 1", "Step 2"], "reference_id_highlight": "..." }`;
 }

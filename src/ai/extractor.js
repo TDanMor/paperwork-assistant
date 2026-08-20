@@ -204,7 +204,8 @@ export function extractFacts(ocrText) {
     Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung', 'aok', 'tk', 'barmer', 'allianz'],
     Housing: ['miete', 'nebenkosten', 'betriebskosten'],
-    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung']
+    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung'],
+    Special_Action: ['bankverbindung', 'kontoverbindung', 'iban mitteilen', 'abholort', 'abholtermin', 'bereitstellung', 'reimbursement', 'erstattung']
   };
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
     if (kws.some(kw => fullTextLower.includes(kw))) facts.nuances.push(cat);
@@ -259,16 +260,22 @@ export function extractFacts(ocrText) {
     facts.doc_stage = 'other';
   }
 
-  // --- DATES ---
+  // --- DATES & TIMES ---
   const dateRegex = /\b([0-3]?\d)\.([0-1]?\d)\.(\d{2,4})\b/g;
+  const timeRegex = /\b([01]?\d|2[0-3])[:.][0-5]\d\b/g;
   let dMatch;
   while ((dMatch = dateRegex.exec(ocrText)) !== null) {
-    const window = ocrText.slice(Math.max(0, dMatch.index - 80), Math.min(ocrText.length, dMatch.index + 80));
+    const window = ocrText.slice(Math.max(0, dMatch.index - 120), Math.min(ocrText.length, dMatch.index + 120));
     let role = 'other';
     if (hasFuzzyKeyword(window, KEYWORDS.DUE)) role = 'due';
     else if (hasFuzzyKeyword(window, KEYWORDS.ISSUED)) role = 'issued';
     else if (hasFuzzyKeyword(window, KEYWORDS.APPT)) role = 'appointment';
-    facts.dates.push({ value: dMatch[0], role, index: dMatch.index });
+
+    // Attempt to find time window nearby (e.g. for Restlos pickup)
+    const timeMatch = window.match(/([01]?\d|2[0-3])[:.][0-5]\d/);
+    const timeInfo = timeMatch ? ` at ${timeMatch[0]}` : '';
+
+    facts.dates.push({ value: dMatch[0], role, index: dMatch.index, time: timeMatch ? timeMatch[0] : null });
   }
 
   // Deadline calculation for Widerspruch
