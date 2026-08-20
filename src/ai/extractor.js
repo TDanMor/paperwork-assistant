@@ -89,12 +89,13 @@ function harvestAddresses(ocrText, lines) {
     const pcRegex = /\b\d{5}\b/g;
     // Street Name + House Number (e.g. Ludwig-Erhard-Str. 16 or Gartenweg 4a)
     const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
-    const results = { sender: null, recipient: null, action: null };
+    const results = { sender: null, sender_lines: null, recipient: null, action: null };
 
     let match;
     while ((match = pcRegex.exec(ocrText)) !== null) {
         const lineIdx = ocrText.substring(0, match.index).split('\n').length - 1;
-        const cluster = lines.slice(Math.max(0, lineIdx - 3), Math.min(lines.length, lineIdx + 2)).join(' ');
+        const clusterLines = lines.slice(Math.max(0, lineIdx - 3), Math.min(lines.length, lineIdx + 2));
+        const cluster = clusterLines.join(' ');
 
         let score = 0;
         if (streetRegex.test(cluster)) score += 5;
@@ -103,6 +104,7 @@ function harvestAddresses(ocrText, lines) {
             results.action = cluster;
         } else if (/absender|firma|tel:|fax:|email|ust-id|postfach/i.test(cluster)) {
             results.sender = cluster;
+            results.sender_lines = clusterLines;
         } else if (/herr|frau|familie|z.hd.|empfänger/i.test(cluster)) {
             results.recipient = cluster;
         } else if (score > 0 && !results.recipient) {
@@ -289,6 +291,42 @@ export function extractFacts(ocrText) {
   if (bestSender) {
     facts.sender = (bestSender.name === "Rundfunkbeitrag") ? "Beitragsservice (GEZ)" : bestSender.name;
     facts.risk_flags.sender_looks_official = officialSenders.includes(bestSender.name);
+  } else {
+    // --- SENDER RECOVERY ---
+    let recoveredSender = null;
+
+    // 1. Generic Company Detector: Scan first 10 lines for legal forms
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+        const line = lines[i].trim();
+        const match = line.match(/(.*?)\b(GmbH|UG|e\.K\.|AG|KG|OHG)\b/i);
+        if (match) {
+            let potential = match[0].trim();
+            potential = potential.replace(/^absender:?\s*/i, '').replace(/^[,.-]+/, '').trim();
+            if (potential.length > 2 && potential.length <= 50) {
+                recoveredSender = potential;
+                break;
+            }
+        }
+    }
+
+    // 2. Fallback to Address Harvester's Sender Cluster (First line)
+    if (!recoveredSender && facts.addresses.sender_lines) {
+        const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
+        for (const line of facts.addresses.sender_lines) {
+            let cleanLine = line.trim().replace(/^absender:?\s*/i, '').replace(/,+$/, '').trim();
+            if (/\b\d{5}\b/.test(cleanLine)) continue; // Skip postal code lines
+            if (streetRegex.test(cleanLine)) continue; // Skip street lines
+            if (cleanLine.length > 2) {
+                recoveredSender = cleanLine;
+                break;
+            }
+        }
+    }
+
+    if (recoveredSender) {
+        // Final Sanitization
+        facts.sender = recoveredSender.replace(/,+$/, '').replace(/^absender:?\s*/i, '').trim();
+    }
   }
 
   // Prioritize Categories based on Sender (MUST run AFTER sender is identified)
