@@ -1,10 +1,10 @@
 /**
- * Paperwork Assistant - Elite Deterministic Extraction Layer V3.2
+ * Paperwork Assistant - Elite Deterministic Extraction Layer V3.3
  *
- * "Highest Score" Pass:
- * - Fixed Sender Collision (TK, AOK matched correctly as whole words).
- * - Added 1&1, O2, and other private providers.
- * - Forced 'Pay' action when an invoice amount is detected.
+ * "Bulletproof Sender" Pass:
+ * - Implemented Sender Scoring (counts occurrences instead of first-match).
+ * - Added URL/Email protection (ignores matches inside web addresses).
+ * - Weighted Header detection (matches in the first 800 chars get priority).
  */
 
 // --- 1. FUZZY & UTILS ---
@@ -84,6 +84,7 @@ function harvestAddresses(ocrText, lines) {
 export function extractFacts(ocrText) {
   const lines = ocrText.split('\n');
   const fullTextLower = ocrText.toLowerCase();
+  const headerText = ocrText.slice(0, 1000).toLowerCase();
 
   const facts = {
     sender: 'Unknown',
@@ -100,21 +101,31 @@ export function extractFacts(ocrText) {
     attachments: []
   };
 
-  // Sender Logic - Strict Whole Word Matching
+  // --- SENDER SCORING ENGINE ---
   const officialSenders = ["AOK", "TK", "Barmer", "Finanzamt", "Jobcenter", "Rentenversicherung", "Beitragsservice", "Rundfunkbeitrag"];
   const privateSenders = ["1&1", "Vodafone", "Telekom", "O2", "Stadtwerke", "ADAC", "Restlos", "Amazon", "IKEA"];
 
+  let candidates = [];
   for (const s of [...officialSenders, ...privateSenders]) {
-    // Regex for whole word or special char boundaries
-    const sRegex = new RegExp(`(?:^|\\W)${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|\\W)`, 'i');
-    if (sRegex.test(ocrText)) {
-      facts.sender = (s === "Rundfunkbeitrag") ? "Beitragsservice (GEZ)" : s;
-      facts.risk_flags.sender_looks_official = officialSenders.includes(s);
-      break;
+    // Strict whole word check that ignores URL components
+    const sRegex = new RegExp(`(?:^|[^\\w./])${s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|[^\\w-])`, 'gi');
+    let matchCount = (ocrText.match(sRegex) || []).length;
+
+    if (matchCount > 0) {
+      let score = matchCount;
+      // Triple points if found in the header/letterhead
+      if (headerText.includes(s.toLowerCase())) score += 10;
+      candidates.push({ name: s, score });
     }
   }
 
-  // Legal Stage
+  const bestSender = candidates.sort((a, b) => b.score - a.score)[0];
+  if (bestSender) {
+    facts.sender = (bestSender.name === "Rundfunkbeitrag") ? "Beitragsservice (GEZ)" : bestSender.name;
+    facts.risk_flags.sender_looks_official = officialSenders.includes(bestSender.name);
+  }
+
+  // --- LEGAL LOGIC ---
   if (hasFuzzyKeyword(ocrText, ['vollstreckungsbescheid', 'mahnbescheid'])) {
     facts.doc_stage = 'mahnbescheid';
     facts.risk_flags.is_court_order = true;
@@ -122,7 +133,7 @@ export function extractFacts(ocrText) {
   else if (hasFuzzyKeyword(ocrText, ['anhörung'])) facts.doc_stage = 'anhoerung';
   else if (hasFuzzyKeyword(ocrText, ['mitwirkung'])) facts.doc_stage = 'mitwirkung';
 
-  // Dates
+  // --- DATES ---
   const dateRegex = /\b([0-3]?\d)\.([0-1]?\d)\.(\d{2,4})\b/g;
   let dMatch;
   while ((dMatch = dateRegex.exec(ocrText)) !== null) {
@@ -134,7 +145,7 @@ export function extractFacts(ocrText) {
     facts.dates.push({ value: dMatch[0], role, index: dMatch.index });
   }
 
-  // Amounts
+  // --- AMOUNTS ---
   const amountRegex = /(?:EUR|€)\s*(\d{1,3}(?:\.\d{3})*(?:,\d{2}))|(\d{1,3}(?:\.\d{3})*(?:,\d{2}))\s*(?:EUR|€)/g;
   while ((dMatch = amountRegex.exec(ocrText)) !== null) {
     const val = parseEuro(dMatch[0]);
@@ -144,10 +155,9 @@ export function extractFacts(ocrText) {
     facts.amounts.push({ value: val, role: polarity, index: dMatch.index });
   }
 
-  // Final Action Logic
+  // --- FINAL ACTION LOGIC ---
   let score = { debit: (facts.amounts.filter(a => a.role === 'debit').length), credit: (facts.amounts.filter(a => a.role === 'credit').length) };
 
-  // Rule: If Math Table exists or high Debit score, it's a 'Pay' action
   if (facts.table || score.debit > 0 || fullTextLower.includes('rechnung') || fullTextLower.includes('mahnung')) {
       facts.polarity_overall = 'nachzahlung';
       facts.actions.push({ key: 'pay', priority: 1, reason: 'Invoice or payment obligation detected' });
