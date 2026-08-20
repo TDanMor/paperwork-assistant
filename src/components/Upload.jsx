@@ -101,6 +101,8 @@ export default function Upload() {
           created_at: now.toISOString(),
           year:       now.getFullYear(),
           month:      now.getMonth() + 1,
+          day:        now.getDate(),
+          timestamp:  now.toLocaleString(state.language === 'de' ? 'de-DE' : 'en-GB'),
           language:   state.language,
           is_done:    false
         };

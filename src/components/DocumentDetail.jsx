@@ -106,7 +106,7 @@ export default function DocumentDetail({ docId }) {
             <table className="detail-table">
               <tbody>
                 <Row label={t('detail.sender')}   value={doc.sender}        bold />
-                <Row label={t('detail.type')}     value={doc.document_type} />
+                <Row label={t('detail.type')}     value={t(`categories.${doc.document_type}`) || doc.document_type} />
                 <Row label={t('detail.category')} value={doc.sub_category ? `${t(`categories.${doc.main_category}`)} › ${t(`categories.${doc.sub_category}`)}` : t(`categories.${doc.main_category}`)} />
                 {doc.dates?.document_date && <Row label={t('detail.date')} value={doc.dates.document_date} />}
                 {doc.dates?.due_date && <Row label={t('detail.due_date')} value={doc.dates.due_date} bold />}

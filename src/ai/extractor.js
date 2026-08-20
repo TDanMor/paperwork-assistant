@@ -201,12 +201,10 @@ export function extractFacts(ocrText) {
 
   // --- NUANCE HUNTING ---
   const serviceKeywords = {
-    Internet: ['dsl', 'internet', 'breitband', 'glasfaser'],
-    Mobile: ['mobilfunk', 'handy', 'sim-karte', 'lte', '5g'],
+    Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'sim-karte', 'lte', '5g', 'strom', 'gas', 'wasser', 'abfall', 'müll'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung'],
-    Utilities: ['strom', 'gas', 'wasser', 'abfall', 'müll'],
-    Rent: ['miete', 'nebenkosten', 'betriebskosten'],
-    Taxes: ['steuer', 'finanzamt', 'einkommensteuer', 'ust-id']
+    Housing: ['miete', 'nebenkosten', 'betriebskosten'],
+    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'ust-id', 'bank', 'kredit', 'darlehen']
   };
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
     if (kws.some(kw => fullTextLower.includes(kw))) facts.nuances.push(cat);
@@ -250,7 +248,9 @@ export function extractFacts(ocrText) {
     facts.doc_stage = 'mitwirkung';
     facts.actions.push({ key: 'respond', priority: 1, reason: 'Duty to cooperate (Mitwirkungspflicht)' });
   } else if (hasFuzzyKeyword(ocrText, ['bescheinigung'])) {
-    facts.doc_stage = 'info';
+    facts.doc_stage = 'bescheinigung';
+  } else {
+    facts.doc_stage = 'other';
   }
 
   // --- DATES ---
