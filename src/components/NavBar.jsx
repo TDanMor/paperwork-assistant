@@ -54,8 +54,8 @@ export default function NavBar() {
           onChange={handleModeChange}
           style={{ fontSize: '0.8rem', padding: '0.2rem 0.4rem' }}
         >
-          <option value="pro">🏆 {t('settings.ai_pro_title').split(' ')[2] || 'Pro'}</option>
-          <option value="lite">⚡ {t('settings.ai_lite_title').split(' ')[2] || 'Lite'}</option>
+          <option value="pro">🏆 {t('settings.ai_pro_title')} ({t('settings.ai_pro_desc')})</option>
+          <option value="lite">⚡ {t('settings.ai_lite_title')} ({t('settings.ai_lite_desc')})</option>
         </select>
 
         <LangSwitcher variant="compact" />
