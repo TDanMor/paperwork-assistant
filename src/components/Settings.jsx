@@ -131,13 +131,6 @@ export default function Settings() {
     <div className="page-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
       <h1 className="page-title">{t('settings.title')}</h1>
 
-      {/* Stable Multilingual Selector */}
-      <section className="settings-card">
-        <h2>🌐 {t('settings.language')}</h2>
-        <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1rem' }}>{t('settings.language_subtitle')}</p>
-        <LangSwitcher />
-      </section>
-
       {/* Backup */}
       <section className="settings-card" style={{ borderLeft: '4px solid var(--accent)' }}>
         <h2>{t('settings.backup_title')}</h2>
