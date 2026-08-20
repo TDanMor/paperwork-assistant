@@ -40,7 +40,7 @@ Write a JSON object with these keys:
 
 RULES:
 - Be specific: use exact amounts, dates, and names from the text.
-- Never say "check the document" — YOU are the one reading it for the user.
+- Never say "check the document" — YOU are the one reading it for the user.${facts.is_direct_debit ? '\n- MANDATORY: This bill uses Direct Debit (Lastschrift). Tell the user clearly that the amount will be deducted automatically from their account and they do NOT need to do anything. Stop telling them to send bank details.' : ''}${facts.polarity_overall === 'nachzahlung' ? '\n- MANDATORY: The user OWES this money. Never say they will "receive money".' : ''}
 - Respond ONLY with the JSON object. Do NOT add any tags, headers, or explanations outside of the JSON. No XML, no markdown, no code blocks. Just the raw JSON object starting with { and ending with }.`;
 }
 

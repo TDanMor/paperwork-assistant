@@ -201,7 +201,8 @@ export function extractFacts(ocrText) {
     table: harvestTableMath(ocrText),
     addresses: harvestAddresses(ocrText, lines),
     attachments: [],
-    nuances: []
+    nuances: [],
+    is_direct_debit: false
   };
 
   // --- CATEGORY TAGGING (internal use only, never shown to user) ---
@@ -315,6 +316,8 @@ export function extractFacts(ocrText) {
     facts.actions.push({ key: 'respond', priority: 1, reason: 'Duty to cooperate (Mitwirkungspflicht)' });
   } else if (hasFuzzyKeyword(ocrText, ['bescheinigung'])) {
     facts.doc_stage = 'bescheinigung';
+  } else if (facts.sender.match(/1&1|Vodafone|Telekom/i)) {
+    facts.doc_stage = (fullTextLower.includes('mobil') || fullTextLower.includes('handy')) ? 'Mobile' : 'Internet';
   } else {
     facts.doc_stage = 'other';
   }
@@ -353,10 +356,17 @@ export function extractFacts(ocrText) {
     facts.amounts.push({ value: val, role: polarity, index: dMatch.index });
   }
 
+  facts.is_direct_debit = /lastschrift|abbuche|einzugsermächtigung|mandat/i.test(ocrText);
+
   // --- FINAL ACTION LOGIC ---
   if (facts.table?.confirmed || fullTextLower.includes('rechnung') || fullTextLower.includes('mahnung')) {
       facts.polarity_overall = 'nachzahlung';
-      facts.actions.push({ key: 'pay', priority: 1, reason: facts.table?.confirmed ? 'Confirmed Invoice (VAT Match)' : 'Payment obligation detected' });
+      
+      if (facts.is_direct_debit && !fullTextLower.includes('mahnung')) {
+          facts.actions.push({ key: 'file', priority: 1, reason: 'Direct Debit (Lastschrift) active - automatic deduction' });
+      } else {
+          facts.actions.push({ key: 'pay', priority: 1, reason: facts.table?.confirmed ? 'Confirmed Invoice (VAT Match)' : 'Payment obligation detected' });
+      }
   }
 
   if (hasFuzzyKeyword(ocrText, ['termin', 'einladung'])) facts.actions.push({ key: 'attend', priority: 1, reason: 'Appointment detected' });
