@@ -36,9 +36,8 @@ Write a JSON object with these keys:
 3. "reference_id_highlight": any reference number you find, or null.
 
 RULES:
-- Be specific: use exact amounts, dates, and names from the text.
 - Never say "check the document" — YOU are the one reading it for the user.
-- Respond ONLY with the JSON object, nothing else.`;
+- Respond ONLY with the JSON object. Do NOT use markdown code blocks or XML tags like <document_summary>.`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
@@ -84,11 +83,15 @@ export function parseAIResponse(raw, attentionModel) {
 
   // --- STAGE 2: Rescue natural language if JSON failed ---
   if (!jsonParsed.summary && raw && raw.trim().length > 30) {
-    // Strip any partial JSON fragments
+    // Strip any partial JSON fragments or XML tags
     const plainText = raw
+      .replace(/<[^>]*>?/gm, '')         // Remove XML/HTML tags
       .replace(/```[\s\S]*?```/g, '')   // Remove code blocks
       .replace(/\{[\s\S]*$/g, '')        // Remove broken JSON at end
       .replace(/^[\s\S]*?\}/g, '')       // Remove broken JSON at start
+      .replace(/^(Summary|Briefing|Description):\s*/i, '') // Remove prefixes
+      .replace(/"(summary|action_steps_explanation|reference_id_highlight)":\s*/gi, '') // Remove internal key names
+      .replace(/"/g, '')                 // Remove stray quotes
       .trim();
 
     if (plainText.length > 30) {
