@@ -98,8 +98,21 @@ export function extractFacts(ocrText) {
     risk_flags: { is_court_order: false, sender_looks_official: false },
     table: harvestTableMath(ocrText),
     addresses: harvestAddresses(ocrText, lines),
-    attachments: []
+    attachments: [],
+    nuances: []
   };
+
+  // --- NUANCE HUNTING ---
+  const serviceKeywords = {
+    Internet: ['dsl', 'internet', 'breitband', 'glasfaser'],
+    Mobile: ['mobilfunk', 'handy', 'sim-karte', 'lte', '5g'],
+    Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung'],
+    Utilities: ['strom', 'gas', 'wasser', 'abfall', 'müll'],
+    Rent: ['miete', 'nebenkosten', 'betriebskosten']
+  };
+  for (const [cat, kws] of Object.entries(serviceKeywords)) {
+    if (kws.some(kw => fullTextLower.includes(kw))) facts.nuances.push(cat);
+  }
 
   // --- SENDER SCORING ENGINE ---
   const officialSenders = ["AOK", "TK", "Barmer", "Finanzamt", "Jobcenter", "Rentenversicherung", "Beitragsservice", "Rundfunkbeitrag"];

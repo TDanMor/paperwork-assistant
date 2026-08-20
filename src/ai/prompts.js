@@ -8,29 +8,23 @@ export function buildSystemPrompt(language, attentionModel) {
   const actionsStr = attentionModel.facts.actions.map(a => a.key).join(", ");
   const remedyStr = facts.legal_remedy.present ? `Yes (${facts.legal_remedy.type})` : "No";
 
-  return `Expert Admin Guide. Target: ${langName}.
-Factual Context:
-- Sender: ${facts.sender} (${facts.risk_flags.sender_looks_official ? 'Official Authority' : 'Private'})
-- Legal Stage: ${facts.doc_stage}
-- Polarity: ${facts.polarity_overall}
+  return `You are a Senior Administrative Assistant for documents in Germany.
+Target Language: ${langName}.
+
+I have already verified these core facts (DO NOT CONTRADICT THEM):
+- Sender: ${facts.sender}
 - Primary Action: ${attentionModel.primaryAction}
-- Multiple Obligations: [${actionsStr}]
-- Appeal Possible: ${remedyStr}
-- Attachments found: ${facts.attachments?.length || 0}
-- Historical Change: ${attentionModel.amountChanged ? 'Yes (Amount has changed from previous doc)' : 'No'}
-- Action Location: ${facts.addresses.action || 'Not specified'}
+- Topic: ${facts.nuances.join(", ") || 'General correspondence'}
+- Amount: ${facts.amounts[0]?.value || 'N/A'} EUR
 
-Your job is only to EXPLAIN these facts to the user in simple ${langName}.
-CRITICAL: You MUST use the facts provided. Do NOT hallucinate a different Sender or Action.
-Rules:
-1. Explain WHAT this is (e.g. ${facts.doc_stage} from ${facts.sender}).
-2. Explain the legal weight and required action (${attentionModel.primaryAction}).
-3. Mention any attachments or action locations found.
-4. If it's a bill, remind the user of the amount: ${facts.amounts[0]?.value || 'see details'}.
-5. Do NOT change the actions or numbers.
-5. Output ONLY a FLAT JSON object.
+YOUR MISSION:
+Explain this document to the user in a professional, information-dense summary.
+1. Use the <document_snippets> to find the SPECIFIC REASON (e.g. "DSL Monthly Bill", "Health Insurance Refund").
+2. Write a comprehensive summary in ${langName}.
+3. Provide concrete action steps based on the verified facts.
+4. If it's a bill, mention the service period if found in the snippets.
 
-JSON Schema: {summary, action_steps_explanation}`;
+Output ONLY a JSON object: { "summary": "...", "action_steps_explanation": ["..."] }`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
