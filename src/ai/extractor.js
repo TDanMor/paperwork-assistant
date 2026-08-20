@@ -292,27 +292,36 @@ export function extractFacts(ocrText) {
   return facts;
 }
 
-export function smartSliceOCR(text, maxChars = 2500, facts = null) {
+export function smartSliceOCR(text, maxChars = 2800, facts = null) {
   if (!text || text.length <= maxChars) return text;
-  const header = text.slice(0, 800), tail = text.slice(-400);
+  const header = text.slice(0, 1000), tail = text.slice(-500);
   if (!facts) return header + "\n[...]\n" + tail;
+
+  // 🛡️ Elite Slicing: Find full sentences containing our facts
   const anchors = [
     ...facts.dates.map(d => d.index),
     ...facts.amounts.map(a => a.index)
-  ].filter(idx => idx > 800 && idx < text.length - 400);
+  ].filter(idx => idx > 1000 && idx < text.length - 500);
 
-  let windows = anchors.map(idx => ({ start: Math.max(0, idx - 200), end: Math.min(text.length, idx + 200) }));
+  let windows = anchors.map(idx => {
+    // Look for sentence boundaries (. ! ?)
+    const start = text.lastIndexOf('.', idx) + 1 || idx - 150;
+    const end = text.indexOf('.', idx) + 1 || idx + 150;
+    return { start: Math.max(0, start), end: Math.min(text.length, end + 50) };
+  });
+
   if (windows.length > 0) {
     windows.sort((a, b) => a.start - b.start);
     const merged = [windows[0]];
     for (let i = 1; i < windows.length; i++) {
         let last = merged[merged.length - 1];
-        if (windows[i].start <= last.end) last.end = Math.max(last.end, windows[i].end);
+        if (windows[i].start <= last.end + 100) last.end = Math.max(last.end, windows[i].end);
         else merged.push(windows[i]);
     }
     windows = merged;
   }
-  return (header + "\n[...]\n" + windows.map(w => text.slice(w.start, w.end)).join('\n[...]\n') + "\n[...]\n" + tail).slice(0, maxChars);
+  const middle = windows.map(w => text.slice(w.start, w.end)).join('\n[...]\n');
+  return (header + "\n[...]\n" + middle + "\n[...]\n" + tail).slice(0, maxChars);
 }
 
 export function buildAttentionModel(ocrText, previousDocs = []) {
