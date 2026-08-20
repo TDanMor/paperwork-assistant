@@ -441,8 +441,31 @@ body {
 .detail-table              { width: 100%; border-collapse: collapse; }
 .detail-table tr           { border-bottom: 1px solid var(--border); }
 .detail-table tr:last-child{ border-bottom: none; }
-.detail-table td           { padding: .55rem 0; font-size: .875rem; }
-.detail-table__label       { color: var(--muted); width: 38%; padding-right: 1rem; }
+.detail-table td {
+  padding: 0.75rem 0;
+  font-size: 0.875rem;
+  vertical-align: top;
+}
+
+.detail-table__label {
+  color: var(--muted);
+  width: 35%;
+  padding-right: 1rem;
+  font-weight: 500;
+}
+
+@media (max-width: 480px) {
+  .detail-table tr {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+  }
+  .detail-table__label {
+    width: 100%;
+    margin-bottom: 0.15rem;
+    font-size: 0.75rem;
+  }
+}
 .detail-table__val--bold   { font-weight: 700; }
 .ocr-box {
   background: var(--bg);
@@ -519,7 +542,35 @@ body {
 /* ============================================================
    RESPONSIVE
 ============================================================ */
+@media (max-width: 1024px) {
+  .main-content {
+    max-width: 100%;
+    padding: 1.5rem 1rem;
+  }
+  .kanban-board {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
+  .navbar {
+    padding: 0 1rem;
+    height: auto;
+    min-height: var(--navbar-h);
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .navbar-links {
+    order: 3;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+    justify-content: space-around;
+  }
+
   .detail-layout {
     flex-direction: column-reverse;
   }
@@ -530,22 +581,78 @@ body {
   .doc-preview-media {
     height: 50vh;
   }
+
+  .perf-dropdown-menu {
+    right: auto;
+    left: 0;
+  }
 }
+
 @media (max-width: 580px) {
-  .main-content          { padding: 1rem .75rem 2rem; }
-  .navbar                { padding: 0 .85rem; gap: .75rem; }
-  .nav-label             { display: none; }
-  .navbar-brand          { font-size: .85rem; }
-  .tile-grid             { grid-template-columns: 1fr; }
-  .folder-grid           { grid-template-columns: repeat(2, 1fr); }
-  .detail-table__label   { width: 45%; }
+  .main-content {
+    padding: 1rem 0.75rem 5rem; /* Extra bottom padding for mobile tap targets */
+  }
+
+  .navbar-brand-text {
+    font-size: 0.95rem;
+  }
+
+  .navbar-brand-icon {
+    font-size: 1.1rem;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .nav-btn {
+    padding: 0.5rem;
+  }
+
+  .nav-icon {
+    font-size: 1.25rem;
+  }
+
+  .kanban-board {
+    grid-template-columns: 1fr;
+  }
+
+  .folder-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .detail-table__label {
+    width: 45%;
+  }
+
+  .page-title {
+    font-size: 1.3rem;
+  }
+
+  .perf-trigger {
+    min-width: 120px;
+  }
+
+  .perf-current-title {
+    font-size: 0.75rem;
+  }
+
+  .perf-dropdown-menu {
+    width: 240px;
+  }
+}
+
+@media (max-width: 400px) {
+  .navbar-brand-info {
+    display: none; /* Hide title on extremely small screens, icon only */
+  }
 }
 /* ============================================================
    LANGUAGE SWITCHER
 ============================================================ */
 .lang-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 0.75rem;
 }
 
@@ -570,9 +677,24 @@ body {
   border-color: var(--primary);
 }
 
-/* ============================================================
-   PERFORMANCE TOGGLE
-============================================================ */
+.summary-banner {
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  borderRadius: var(--radius);
+  marginBottom: 1.5rem;
+  display: flex;
+  alignItems: center;
+  gap: 0.75rem;
+  boxShadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+@media (max-width: 480px) {
+  .summary-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 .perf-toggle-container {
   position: relative;
   display: flex;

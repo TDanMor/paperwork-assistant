@@ -56,7 +56,7 @@ export default function Dashboard() {
       <GpuGuard />
 
       {/* Intuitive Human Summary Banner */}
-      <div style={{ padding: '1rem 1.25rem', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+      <div className="summary-banner" style={{ boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
         <span style={{ fontSize: '1.5rem' }}>💡</span>
         <div>
           <h2 style={{ fontSize: '0.95rem', fontWeight: 700, margin: '0 0 0.15rem 0' }}>{t('dashboard.workspace_briefing')}</h2>
