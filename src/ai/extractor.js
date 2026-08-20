@@ -91,25 +91,33 @@ function harvestAddresses(ocrText, lines) {
     const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
     const results = { sender: null, sender_lines: null, recipient: null, action: null };
 
+    const clusters = [];
     let match;
     while ((match = pcRegex.exec(ocrText)) !== null) {
         const lineIdx = ocrText.substring(0, match.index).split('\n').length - 1;
         const clusterLines = lines.slice(Math.max(0, lineIdx - 3), Math.min(lines.length, lineIdx + 2));
-        const cluster = clusterLines.join(' ');
+        clusters.push({ lineIdx, clusterLines, cluster: clusterLines.join(' ') });
+    }
 
+    for (const c of clusters) {
         let score = 0;
-        if (streetRegex.test(cluster)) score += 5;
+        if (streetRegex.test(c.cluster)) score += 5;
 
-        if (/abholort|filiale|paketshop|packstation|standort|lager/i.test(cluster)) {
-            results.action = cluster;
-        } else if (/absender|firma|tel:|fax:|email|ust-id|postfach/i.test(cluster)) {
-            results.sender = cluster;
-            results.sender_lines = clusterLines;
-        } else if (/herr|frau|familie|z.hd.|empfänger/i.test(cluster)) {
-            results.recipient = cluster;
+        // Check if this specific line is a single-line comma-separated sender (Rücksendeangabe)
+        const pcLine = lines[c.lineIdx] || '';
+        const isSingleLineAddress = pcLine.includes(',') && streetRegex.test(pcLine) && pcLine.length > 20;
+
+        if (/abholort|filiale|paketshop|packstation|standort|lager/i.test(c.cluster)) {
+            results.action = c.cluster;
+        } else if (/absender|firma|tel:|fax:|email|ust-id|postfach/i.test(c.cluster) || isSingleLineAddress) {
+            if (!results.sender) {
+                results.sender = c.cluster;
+                results.sender_lines = c.clusterLines;
+            }
+        } else if (/herr|frau|familie|z.hd.|empfänger/i.test(c.cluster)) {
+            results.recipient = c.cluster;
         } else if (score > 0 && !results.recipient) {
-            // High probability of being the recipient if no explicit sender flags
-            results.recipient = cluster;
+            results.recipient = c.cluster;
         }
     }
     return results;
@@ -298,7 +306,8 @@ export function extractFacts(ocrText) {
     // 1. Generic Company Detector: Scan first 10 lines for legal forms
     for (let i = 0; i < Math.min(10, lines.length); i++) {
         const line = lines[i].trim();
-        const match = line.match(/(.*?)\b(GmbH|UG|e\.K\.|AG|KG|OHG)\b/i);
+        // Require uppercase start, avoid matching "on i AG" or random lowercase noise
+        const match = line.match(/(?:^|\s)([A-ZÄÖÜ][\w\s&-]{1,40})\b(GmbH|UG|e\.K\.|AG|KG|OHG)\b/i);
         if (match) {
             let potential = match[0].trim();
             potential = potential.replace(/^absender:?\s*/i, '').replace(/^[,.-]+/, '').trim();
@@ -309,13 +318,21 @@ export function extractFacts(ocrText) {
         }
     }
 
-    // 2. Fallback to Address Harvester's Sender Cluster (First line)
+    // 2. Fallback to Address Harvester's Sender Cluster
     if (!recoveredSender && facts.addresses.sender_lines) {
         const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
         for (const line of facts.addresses.sender_lines) {
             let cleanLine = line.trim().replace(/^absender:?\s*/i, '').replace(/,+$/, '').trim();
-            if (/\b\d{5}\b/.test(cleanLine)) continue; // Skip postal code lines
-            if (streetRegex.test(cleanLine)) continue; // Skip street lines
+            
+            // If it's a single-line address with commas, take the first part
+            if (cleanLine.includes(',') && /\b\d{5}\b/.test(cleanLine)) {
+                recoveredSender = cleanLine.split(',')[0].trim();
+                break;
+            }
+
+            if (/\b\d{5}\b/.test(cleanLine)) continue; // Skip standalone postal code lines
+            if (streetRegex.test(cleanLine)) continue; // Skip standalone street lines
+            
             if (cleanLine.length > 2) {
                 recoveredSender = cleanLine;
                 break;
