@@ -87,8 +87,8 @@ function harvestTableMath(ocrText) {
  */
 function harvestAddresses(ocrText, lines) {
     const pcRegex = /\b\d{5}\b/g;
-    // Street Name + House Number (e.g. Ludwig-Erhard-Str. 16 or Gartenweg 4a)
-    const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
+    // Street Name + House Number (e.g. Ludwig-Erhard-Str. 16 or Gartenweg 4a or 33E)
+    const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-zA-Z]?/;
     const results = { sender: null, sender_lines: null, recipient: null, action: null };
 
     const clusters = [];
@@ -306,8 +306,8 @@ export function extractFacts(ocrText) {
     // 1. Generic Company Detector: Scan first 10 lines for legal forms
     for (let i = 0; i < Math.min(10, lines.length); i++) {
         const line = lines[i].trim();
-        // Require uppercase start, avoid matching "on i AG" or random lowercase noise
-        const match = line.match(/(?:^|\s)([A-ZÄÖÜ][\w\s&-]{1,40})\b(GmbH|UG|e\.K\.|AG|KG|OHG|gmbh|ug|ag|kg|ohg)\b/);
+        // Require uppercase start, strictly match legal forms to avoid OCR noise
+        const match = line.match(/(?:^|\s)([A-ZÄÖÜ][\w\s&-]{1,40})\b(GmbH|UG|e\.K\.|AG|KG|OHG)\b/);
         if (match) {
             let potential = match[0].trim();
             potential = potential.replace(/^absender:?\s*/i, '').replace(/^[,.-]+/, '').trim();
@@ -320,7 +320,7 @@ export function extractFacts(ocrText) {
 
     // 2. Fallback to Address Harvester's Sender Cluster
     if (!recoveredSender && facts.addresses.sender_lines) {
-        const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-z]?/;
+        const streetRegex = /[A-ZÄÖÜ][a-zäöüß\s.-]+ \d+[a-zA-Z]?/;
         for (const line of facts.addresses.sender_lines) {
             let cleanLine = line.trim().replace(/^absender:?\s*/i, '').replace(/,+$/, '').trim();
             
