@@ -1,11 +1,14 @@
 import { smartSliceOCR } from './extractor.js';
 
 /**
- * Paperwork Assistant - Human Storyteller Prompting V5.0
+ * Paperwork Assistant - Human Storyteller Prompting V5.1
  *
  * Philosophy: The deterministic layer (extractor.js) finds the WHAT.
  * This prompt layer tells the AI to explain the WHY in plain language.
  * Optimized for Llama-3.2-1B/3B: short, direct instructions with examples.
+ *
+ * V5.1: Aggressive JSON Hunter + deepCleanRescue to guarantee zero
+ *        technical leakage (no XML tags, no JSON keys, no brackets).
  */
 
 export function buildSystemPrompt(language, attentionModel) {
@@ -36,15 +39,16 @@ Write a JSON object with these keys:
 3. "reference_id_highlight": any reference number you find, or null.
 
 RULES:
+- Be specific: use exact amounts, dates, and names from the text.
 - Never say "check the document" — YOU are the one reading it for the user.
-- Respond ONLY with the JSON object. Do NOT use markdown code blocks or XML tags like <document_summary>.`;
+- Respond ONLY with the JSON object. Do NOT add any tags, headers, or explanations outside of the JSON. No XML, no markdown, no code blocks. Just the raw JSON object starting with { and ending with }.`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
   const text = smartSliceOCR(ocrText, 3000, attentionModel.facts);
   const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
   const langName = langMap[language] || 'English';
-  return `<document_snippets>\n${text}\n</document_snippets>\n\nExplain this letter to the user. Write the JSON with values in ${langName}.`;
+  return `<document_snippets>\n${text}\n</document_snippets>\n\nRespond with ONLY the JSON object. Values in ${langName}.`;
 }
 
 /**
@@ -61,54 +65,132 @@ function germanDateToISO(dateStr) {
 }
 
 /**
- * Resilient AI Response Parser
- * Priority: Valid JSON > Rescued JSON > Rescued plain text > Human-friendly fallback
+ * Deep Clean Rescue — strips ALL technical artifacts from an AI response
+ * so only human-readable narrative text remains.
+ *
+ * Removes (recursively until stable):
+ *  - XML/HTML tags (<document_summary>, </anything>, <br/>, etc.)
+ *  - JSON key patterns ("summary":, "action_steps_explanation":, etc.)
+ *  - Markdown code fences (```json ... ```)
+ *  - Stray JSON brackets, braces, colons, and quotes
+ *  - Common LLM prefixes ("Here is the summary:", "Summary:", etc.)
+ */
+function deepCleanRescue(raw) {
+  if (!raw || raw.trim().length < 20) return null;
+
+  let text = raw;
+  let prev = '';
+
+  // Recursive cleaning — repeat until output stabilizes
+  while (text !== prev) {
+    prev = text;
+    text = text
+      // 1. Kill ALL XML/HTML tags (opening, closing, self-closing)
+      .replace(/<\/?[a-zA-Z_][\w.-]*(?:\s[^>]*)?\/?>/g, '')
+      // 2. Kill markdown code fences
+      .replace(/```[\s\S]*?```/g, '')
+      .replace(/```/g, '')
+      // 3. Kill JSON key patterns: "key": or "key" :
+      .replace(/"(?:summary|action_steps_explanation|action_steps|reference_id_highlight|reference_id|steps|actions|explanation|document_summary|briefing)"\s*:\s*/gi, '')
+      // 4. Kill leading/trailing braces and brackets
+      .replace(/^\s*[{[\]},]+/g, '')
+      .replace(/[{[\]},]+\s*$/g, '')
+      // 5. Kill orphaned JSON array markers inside text
+      .replace(/^\s*\[\s*/gm, '')
+      .replace(/\s*\]\s*$/gm, '')
+      // 6. Kill stray quotes at line boundaries
+      .replace(/^\s*"+\s*/gm, '')
+      .replace(/\s*"+\s*$/gm, '')
+      // 7. Kill common LLM prefixes/suffixes
+      .replace(/^(Here is|Here's|Below is|The following is|I hope this helps|Let me know)[^.]*[.:]\s*/i, '')
+      .replace(/^(Summary|Briefing|Description|Document Summary|Explanation)\s*[:]\s*/i, '')
+      .trim();
+  }
+
+  // Final quality gate: must have enough readable content
+  if (text.length < 20) return null;
+
+  // Take up to 3 clean sentences
+  const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 10);
+  return sentences.length > 0 ? sentences.slice(0, 4).join(' ') : text.substring(0, 500);
+}
+
+/**
+ * Aggressive JSON Hunter — finds the outermost { ... } in the AI response,
+ * repairs common LLM mistakes, and parses it.
+ */
+function aggressiveJSONParse(raw) {
+  if (!raw) return null;
+
+  // Find the FIRST { and the LAST } in the entire response
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) return null;
+
+  let candidate = raw.substring(firstBrace, lastBrace + 1);
+
+  // Repair common LLM JSON mistakes
+  candidate = candidate
+    .replace(/,\s*([\]}])/g, '$1')           // Trailing commas
+    .replace(/'/g, '"')                       // Single quotes → double quotes (only in JSON context)
+    .replace(/(\w)"(\w)/g, '$1\\"$2')         // Unescaped quotes inside strings (e.g. can"t)
+    .replace(/\n/g, '\\n')                    // Raw newlines inside strings
+    .replace(/\\n\s*"/g, '\\n"')              // Clean up newline+quote
+    .replace(/\\n\s*}/g, '\\n"}');            // Clean up newline+brace
+
+  // Attempt 1: Direct parse
+  try {
+    return JSON.parse(candidate);
+  } catch (e) { /* continue */ }
+
+  // Attempt 2: Re-extract with a more targeted regex (handles nested content)
+  try {
+    const reMatch = raw.match(/\{\s*"summary"\s*:\s*"([\s\S]*?)"\s*,\s*"action_steps_explanation"\s*:\s*\[([\s\S]*?)\]/);
+    if (reMatch) {
+      const summary = reMatch[1].replace(/\\"/g, '"').replace(/"/g, '\\"');
+      const stepsRaw = reMatch[2];
+      const steps = stepsRaw.match(/"([^"]*)"/g)?.map(s => s.replace(/"/g, '')) || [];
+      return { summary: JSON.parse(`"${summary}"`), action_steps_explanation: steps };
+    }
+  } catch (e) { /* continue */ }
+
+  return null;
+}
+
+/**
+ * Resilient AI Response Parser V5.1
+ * Priority: Aggressive JSON > Deep Clean Rescue > Human-friendly fallback
+ * Guarantee: Zero technical leakage to the user.
  */
 export function parseAIResponse(raw, attentionModel) {
   console.log("AI Response:", raw);
-  let jsonParsed = {};
-  let rescueSummary = null;
 
-  // --- STAGE 1: Try clean JSON extraction ---
-  try {
-    const jsonMatch = raw.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      // Fix common LLM JSON mistakes: trailing commas
-      const cleaned = jsonMatch[0].replace(/,\s*([\]}])/g, '$1');
-      jsonParsed = JSON.parse(cleaned);
-    }
-  } catch (e) {
-    console.warn("JSON parse failed, attempting rescue...");
+  // --- STAGE 1: Aggressive JSON Hunter ---
+  const jsonParsed = aggressiveJSONParse(raw) || {};
+
+  // --- STAGE 2: Deep Clean Rescue (if JSON had no summary) ---
+  let rescueSummary = null;
+  if (!jsonParsed.summary) {
+    rescueSummary = deepCleanRescue(raw);
   }
 
-  // --- STAGE 2: Rescue natural language if JSON failed ---
-  if (!jsonParsed.summary && raw && raw.trim().length > 30) {
-    // Strip any partial JSON fragments or XML tags
-    const plainText = raw
-      .replace(/<[^>]*>?/gm, '')         // Remove XML/HTML tags
-      .replace(/```[\s\S]*?```/g, '')   // Remove code blocks
-      .replace(/\{[\s\S]*$/g, '')        // Remove broken JSON at end
-      .replace(/^[\s\S]*?\}/g, '')       // Remove broken JSON at start
-      .replace(/^(Summary|Briefing|Description):\s*/i, '') // Remove prefixes
-      .replace(/"(summary|action_steps_explanation|reference_id_highlight)":\s*/gi, '') // Remove internal key names
-      .replace(/"/g, '')                 // Remove stray quotes
-      .trim();
+  // Clean the parsed summary too (in case JSON values contain tags/leakage)
+  if (jsonParsed.summary) {
+    jsonParsed.summary = deepCleanRescue(jsonParsed.summary) || jsonParsed.summary;
+  }
 
-    if (plainText.length > 30) {
-      // Take up to the first 2-3 meaningful sentences
-      const sentences = plainText.split(/(?<=[.!?])\s+/).filter(s => s.length > 10);
-      rescueSummary = sentences.slice(0, 3).join(' ');
-    } else {
-      // Last resort: use the raw text directly
-      rescueSummary = raw.trim().substring(0, 400);
-    }
+  // Clean action steps if they contain technical artifacts
+  if (Array.isArray(jsonParsed.action_steps_explanation)) {
+    jsonParsed.action_steps_explanation = jsonParsed.action_steps_explanation
+      .map(step => typeof step === 'string' ? step.replace(/<[^>]*>/g, '').trim() : String(step))
+      .filter(step => step.length > 0);
   }
 
   const facts = attentionModel.facts;
   const mainCat = (facts.nuances && facts.nuances[0]) ? facts.nuances[0] : 'Finance';
 
   // --- STAGE 3: Human-friendly deterministic fallback ---
-  // Only used if both AI JSON and rescue failed
   const summaryFallback = buildHumanFallback(facts);
 
   return {
