@@ -1,4 +1,4 @@
-﻿import React, { useContext, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { AppContext }      from '../App.jsx';
 import { loadModel, MODELS, activeModelId, setActiveModel } from '../ai/engine.js';
 import { getAllDocuments, clearAllDocuments, saveDocument }   from '../storage/db.js';
@@ -12,9 +12,9 @@ export default function Settings() {
   const isLite = activeModelId === MODELS.lite;
 
   const handleModeChange = (mode) => {
-    if (window.confirm(t('settings.ai_mode_confirm'))) {
+    if (window.confirm(t('settings.mode_confirm'))) {
         setActiveModel(mode);
-        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.ai_switched_msg') });
+        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.switched_msg') });
     }
   };
   const [exportPassword, setExportPassword] = useState('');

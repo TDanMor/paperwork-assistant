@@ -1,4 +1,4 @@
-﻿import React, { useContext } from 'react';
+import React, { useContext } from 'react';
 import { AppContext } from '../App.jsx';
 import { t } from '../i18n/index.js';
 import LangSwitcher from './LangSwitcher.jsx';
@@ -18,9 +18,9 @@ export default function NavBar() {
 
   const handleModeChange = (e) => {
     const mode = e.target.value;
-    if (window.confirm(t('settings.ai_mode_confirm'))) {
+    if (window.confirm(t('settings.mode_confirm'))) {
       setActiveModel(mode);
-      dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.ai_switched_msg') });
+      dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.switched_msg') });
       // Force a tiny delay so the reducer catches up before any automatic re-load triggers
       setTimeout(() => window.location.reload(), 100);
     }
