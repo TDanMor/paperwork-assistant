@@ -2,7 +2,8 @@
 import { AppContext }       from '../App.jsx';
 import { processFile }      from '../ocr/processor.js';
 import { isModelLoaded, chat, getTokenCount } from '../ai/engine.js';
-import { buildSystemPrompt, buildUserMessage, parseAIResponse, getFallbackData, smartSliceOCR } from '../ai/prompts.js';
+import { buildAttentionModel } from '../ai/extractor.js';
+import { buildSystemPrompt, buildUserMessage, parseAIResponse, getFallbackData } from '../ai/prompts.js';
 import { saveDocument }     from '../storage/db.js';
 import { t }                from '../i18n/index.js';
 
@@ -58,17 +59,16 @@ export default function Upload() {
           try {
             updateItem(item.id, { status: 'processing_engine', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
 
-            const sys = buildSystemPrompt(state.language);
+            // 1. Build Deterministic Attention Model
+            const attentionModel = buildAttentionModel(ocrText);
 
-            // 🛡️ DYNAMIC CONTEXT PRUNING:
-            // On a retry, we aggressively shrink the context to guarantee VRAM safety.
-            const budgetLimit = retryCount > 0 ? 1200 : 2500;
-            const text = smartSliceOCR(ocrText, budgetLimit);
+            // 2. Build Injected Prompt
+            const sys  = buildSystemPrompt(state.language, attentionModel);
+            const user = buildUserMessage(ocrText, state.language, attentionModel);
 
-            const user = buildUserMessage(text, state.language);
-
+            // 3. Inference
             const raw  = await chat(sys, user);
-            aiData = parseAIResponse(raw, ocrText);
+            aiData = parseAIResponse(raw, attentionModel);
 
             wasAiSuccess = true;
             break;
