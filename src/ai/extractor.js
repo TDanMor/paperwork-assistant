@@ -204,7 +204,7 @@ export function extractFacts(ocrText) {
     nuances: []
   };
 
-  // --- NUANCE HUNTING ---
+  // --- CATEGORY TAGGING (internal use only, never shown to user) ---
   const serviceKeywords = {
     Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll', 'telefon', 'festnetz'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung', 'aok', 'tk', 'barmer', 'allianz'],
@@ -216,13 +216,56 @@ export function extractFacts(ocrText) {
     if (kws.some(kw => fullTextLower.includes(kw))) facts.nuances.push(cat);
   }
 
-  // Detect specific sub-intentions for AI guidance
-  const intents = [];
-  if (/bankverbindung|kontoverbindung|iban mitteilen/i.test(ocrText)) intents.push('provide_bank_details');
-  if (/abholort|abholtermin|bereitstellung/i.test(ocrText)) intents.push('pickup_instructions');
-  facts.special_intent = intents.length > 0 ? intents.join(', ') : null;
+  // --- CONTEXT SENTENCE HARVESTER ---
+  // Captures the full sentence around key intent phrases so the AI can tell the story
+  const intentAnchors = [
+    { key: 'provide_bank_details', regex: /bankverbindung|kontoverbindung|iban mitteilen|kontodaten/gi },
+    { key: 'pickup_instructions', regex: /abholort|abholtermin|bereitstellung|abholung|abholen/gi },
+    { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
+    { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
+    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|melden sie sich/gi }
+  ];
 
-  // Ensure unique nuances
+  const activeIntents = [];
+  const intentIndices = [];
+  const contextSentences = [];
+
+  for (const anchor of intentAnchors) {
+    let match;
+    anchor.regex.lastIndex = 0;
+    while ((match = anchor.regex.exec(ocrText)) !== null) {
+      intentIndices.push(match.index);
+      if (!activeIntents.includes(anchor.key)) activeIntents.push(anchor.key);
+
+      // Capture the full sentence around this keyword
+      const sentenceStart = Math.max(0, ocrText.lastIndexOf('.', match.index) + 1, ocrText.lastIndexOf('\n', match.index) + 1);
+      const sentenceEndDot = ocrText.indexOf('.', match.index + match[0].length);
+      const sentenceEndNL = ocrText.indexOf('\n', match.index + match[0].length);
+      const sentenceEnd = Math.min(
+        sentenceEndDot > -1 ? sentenceEndDot + 1 : ocrText.length,
+        sentenceEndNL > -1 ? sentenceEndNL : ocrText.length
+      );
+      const sentence = ocrText.slice(sentenceStart, sentenceEnd).trim();
+      if (sentence.length > 10 && sentence.length < 300 && !contextSentences.includes(sentence)) {
+        contextSentences.push(sentence);
+      }
+    }
+  }
+
+  facts.special_intent = activeIntents.length > 0 ? activeIntents.join(', ') : null;
+  facts.intent_indices = intentIndices;
+  facts.context_sentences = contextSentences;
+
+  // Build a human-readable topic string (for prompt, never raw labels)
+  const topicParts = [];
+  if (activeIntents.includes('provide_bank_details')) topicParts.push('requesting your bank details for a payment');
+  if (activeIntents.includes('reimbursement')) topicParts.push('a reimbursement or refund');
+  if (activeIntents.includes('pickup_instructions')) topicParts.push('a pickup or delivery appointment');
+  if (activeIntents.includes('payment_request')) topicParts.push('a payment you need to make');
+  if (activeIntents.includes('appointment')) topicParts.push('an appointment you need to attend');
+  facts.document_topic = topicParts.length > 0 ? topicParts.join(' and ') : null;
+
+  // Ensure unique nuances (internal categories)
   facts.nuances = [...new Set(facts.nuances)];
 
   // --- SENDER SCORING ENGINE ---
@@ -247,9 +290,12 @@ export function extractFacts(ocrText) {
     facts.risk_flags.sender_looks_official = officialSenders.includes(bestSender.name);
   }
 
-  // Prioritize Insurance for health providers (MUST run AFTER sender is identified)
+  // Prioritize Categories based on Sender (MUST run AFTER sender is identified)
   if (facts.sender.match(/AOK|TK|Barmer|Allianz/i)) {
     facts.nuances = ['Insurance', ...facts.nuances.filter(n => n !== 'Insurance')];
+  }
+  if (facts.sender.match(/Restlos|Stadtwerke|Vodafone|Telekom|1&1/i)) {
+    facts.nuances = ['Utility', ...facts.nuances.filter(n => n !== 'Utility')];
   }
 
   // --- LEGAL & STAGE LOGIC ---
@@ -323,10 +369,11 @@ export function smartSliceOCR(text, maxChars = 2800, facts = null) {
   const header = text.slice(0, 1000), tail = text.slice(-500);
   if (!facts) return header + "\n[...]\n" + tail;
 
-  // 🛡️ Elite Slicing: Find full sentences containing our facts
+  // 🛡️ Elite Slicing: Find full sentences containing our facts & keywords
   const anchors = [
     ...facts.dates.map(d => d.index),
-    ...facts.amounts.map(a => a.index)
+    ...facts.amounts.map(a => a.index),
+    ...(facts.intent_indices || [])
   ].filter(idx => idx > 1000 && idx < text.length - 500);
 
   let windows = anchors.map(idx => {
