@@ -1,4 +1,4 @@
-﻿{
+{
   "app_title": "Paperwork Assistant",
   "nav": {
     "dashboard": "Dashboard",
@@ -166,6 +166,7 @@
     "anhoerung": "Hearing",
     "mahnung": "Reminder",
     "mahnbescheid": "Court Order",
+    "vollstreckung": "Enforcement",
     "mitwirkung": "Cooperation",
     "bescheinigung": "Certificate",
     "info": "Information",

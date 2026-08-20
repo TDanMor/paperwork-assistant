@@ -170,7 +170,12 @@ function calculateWiderspruchDeadline(issuedDateStr) {
   date.setDate(date.getDate() + 3);
 
   // 1-month period (§ 70 VwGO / § 84 SGG)
+  const dayBefore = date.getDate();
   date.setMonth(date.getMonth() + 1);
+  // Guard against month overflow (e.g. Jan 31 + 1 month ≠ Mar 3)
+  if (date.getDate() !== dayBefore) {
+    date.setDate(0); // Roll back to last day of previous month
+  }
 
   return date.toLocaleDateString('de-DE');
 }
@@ -201,7 +206,7 @@ export function extractFacts(ocrText) {
 
   // --- NUANCE HUNTING ---
   const serviceKeywords = {
-    Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll'],
+    Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll', 'telefon', 'festnetz'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung', 'aok', 'tk', 'barmer', 'allianz'],
     Housing: ['miete', 'nebenkosten', 'betriebskosten'],
     Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung']
@@ -212,15 +217,13 @@ export function extractFacts(ocrText) {
   }
 
   // Detect specific sub-intentions for AI guidance
-  facts.special_intent = null;
-  if (/bankverbindung|kontoverbindung|iban mitteilen/i.test(ocrText)) facts.special_intent = 'provide_bank_details';
-  if (/abholort|abholtermin|bereitstellung/i.test(ocrText)) facts.special_intent = 'pickup_instructions';
+  const intents = [];
+  if (/bankverbindung|kontoverbindung|iban mitteilen/i.test(ocrText)) intents.push('provide_bank_details');
+  if (/abholort|abholtermin|bereitstellung/i.test(ocrText)) intents.push('pickup_instructions');
+  facts.special_intent = intents.length > 0 ? intents.join(', ') : null;
 
-  // Ensure unique nuances and prioritize Insurance for health providers
+  // Ensure unique nuances
   facts.nuances = [...new Set(facts.nuances)];
-  if (facts.sender.match(/AOK|TK|Barmer|Allianz/i)) {
-    facts.nuances = ['Insurance', ...facts.nuances.filter(n => n !== 'Insurance')];
-  }
 
   // --- SENDER SCORING ENGINE ---
   const officialSenders = ["Finanzamt", "Jobcenter", "AOK", "TK", "Barmer", "Rentenversicherung", "Beitragsservice", "Rundfunkbeitrag", "Stadtverwaltung", "Landratsamt"];
@@ -242,6 +245,11 @@ export function extractFacts(ocrText) {
   if (bestSender) {
     facts.sender = (bestSender.name === "Rundfunkbeitrag") ? "Beitragsservice (GEZ)" : bestSender.name;
     facts.risk_flags.sender_looks_official = officialSenders.includes(bestSender.name);
+  }
+
+  // Prioritize Insurance for health providers (MUST run AFTER sender is identified)
+  if (facts.sender.match(/AOK|TK|Barmer|Allianz/i)) {
+    facts.nuances = ['Insurance', ...facts.nuances.filter(n => n !== 'Insurance')];
   }
 
   // --- LEGAL & STAGE LOGIC ---

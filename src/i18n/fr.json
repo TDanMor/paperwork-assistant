@@ -1,4 +1,4 @@
-﻿{
+{
   "app_title": "Assistant Documents",
   "nav": {
     "dashboard": "Tableau de bord",
@@ -166,6 +166,7 @@
     "anhoerung": "Audition",
     "mahnung": "Rappel",
     "mahnbescheid": "Injonction",
+    "vollstreckung": "Exécution forcée",
     "mitwirkung": "Coopération",
     "bescheinigung": "Certificat",
     "info": "Information",

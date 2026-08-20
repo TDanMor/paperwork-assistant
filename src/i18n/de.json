@@ -1,4 +1,4 @@
-﻿{
+{
   "app_title": "Dokumenten-Assistent",
   "nav": {
     "dashboard": "Übersicht",
@@ -166,6 +166,7 @@
     "anhoerung": "Anhörung",
     "mahnung": "Mahnung",
     "mahnbescheid": "Mahnbescheid",
+    "vollstreckung": "Vollstreckung",
     "mitwirkung": "Mitwirkung",
     "bescheinigung": "Bescheinigung",
     "info": "Information",

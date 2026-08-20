@@ -19,8 +19,6 @@ export function buildSystemPrompt(language, attentionModel) {
     .join(", ") || "None detected";
 
   const ibanStr = (facts.ibans && facts.ibans.length > 0) ? facts.ibans[0] : "None detected";
-  const deadlineStr = facts.legal_remedy?.deadline || "N/A";
-  const confirmedInvoice = facts.table?.confirmed ? "YES (VAT Math verified)" : "No (Deterministic verification failed)";
 
   return `You are a Senior Administrative Assistant for documents in Germany.
 Target Language: ${langName}.
@@ -49,6 +47,19 @@ export function buildUserMessage(ocrText, language, attentionModel) {
   return `<document_snippets>\n${text}\n</document_snippets>\n\nExplain the document based on the injected bureaucratic facts. JSON format with English keys, values in ${language}.`;
 }
 
+/**
+ * Converts German date format (DD.MM.YYYY) to ISO (YYYY-MM-DD).
+ * Passes through dates already in ISO format or null values.
+ */
+function germanDateToISO(dateStr) {
+  if (!dateStr) return null;
+  const parts = dateStr.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+  if (!parts) return dateStr; // Already ISO or unknown format, pass through
+  let [, d, m, y] = parts;
+  if (y.length === 2) y = '20' + y;
+  return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
 export function parseAIResponse(raw, attentionModel) {
   console.log("Master Level AI Response:", raw);
   let jsonParsed = {};
@@ -63,9 +74,9 @@ export function parseAIResponse(raw, attentionModel) {
   const mainCat = (facts.nuances && facts.nuances[0]) ? facts.nuances[0] : 'Finance';
 
   // Merge Deterministic Facts with AI-generated narrative
-  const summaryFallback = facts.special_intent === 'provide_bank_details'
+  const summaryFallback = facts.special_intent?.includes('provide_bank_details')
     ? `Document from ${facts.sender} regarding reimbursement. Action required: provide bank details.`
-    : facts.special_intent === 'pickup_instructions'
+    : facts.special_intent?.includes('pickup_instructions')
     ? `Document from ${facts.sender} regarding pickup instructions.`
     : `Document from ${facts.sender} regarding ${facts.nuances.join(', ') || 'general matters'}.`;
 
@@ -83,9 +94,9 @@ export function parseAIResponse(raw, attentionModel) {
       is_vat_verified: !!facts.table?.confirmed
     },
     dates: {
-      document_date: facts.dates.find(d => d.role === 'issued')?.value || null,
-      due_date: facts.dates.find(d => d.role === 'due')?.value || null,
-      appointment_date: facts.dates.find(d => d.role === 'appointment')?.value || null,
+      document_date: germanDateToISO(facts.dates.find(d => d.role === 'issued')?.value),
+      due_date: germanDateToISO(facts.dates.find(d => d.role === 'due')?.value),
+      appointment_date: germanDateToISO(facts.dates.find(d => d.role === 'appointment')?.value),
       legal_deadline: facts.legal_remedy.deadline
     },
     urgency: attentionModel.urgency,
