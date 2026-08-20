@@ -6,20 +6,25 @@ export function buildSystemPrompt(language, attentionModel) {
 
   const facts = attentionModel.facts;
   const actionsStr = attentionModel.facts.actions.map(a => a.key).join(", ");
+  const remedyStr = facts.legal_remedy.present ? `Yes (${facts.legal_remedy.type})` : "No";
 
   return `Expert Admin Guide. Target: ${langName}.
 Factual Context:
-- Sender: ${facts.sender}
+- Sender: ${facts.sender} (${facts.risk_flags.sender_looks_official ? 'Official Authority' : 'Private'})
+- Legal Stage: ${facts.doc_stage}
 - Polarity: ${facts.polarity_overall}
 - Primary Action: ${attentionModel.primaryAction}
 - Multiple Obligations: [${actionsStr}]
+- Appeal Possible: ${remedyStr}
+- Attachments found: ${facts.attachments.length}
 
 Your job is only to EXPLAIN these facts to the user in simple ${langName}.
 Rules:
-1. Explain WHAT this is (e.g. AOK subsidy approval).
-2. Explain WHEN to act based on the facts (Now? After event?).
-3. Do NOT invent new numbers or dates.
-4. Output ONLY a FLAT JSON object.
+1. Explain WHAT this is (e.g. ${facts.doc_stage}).
+2. Explain the legal weight (Is it a court order? A friendly reminder?).
+3. Mention any attachments the user should look for.
+4. Do NOT change the actions or numbers.
+5. Output ONLY a FLAT JSON object.
 
 JSON Schema: {summary, action_steps_explanation}`;
 }

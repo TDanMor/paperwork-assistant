@@ -82,7 +82,12 @@ export function extractFacts(ocrText) {
     reference_numbers: [],
     polarity_overall: 'neutral',
     actions: [],
-    locations: []
+    locations: [],
+    doc_stage: 'other',
+    legal_remedy: { present: false, type: null, deadline_type: 'relative' },
+    attachments: [],
+    risk_flags: { is_court_order: false, sender_looks_official: false },
+    service_info: { user_reported_arrival_date: null }
   };
 
   // A. IBAN & SENDER ANCHORS
@@ -94,11 +99,38 @@ export function extractFacts(ocrText) {
   for (const s of commonSenders) {
     if (fullTextLower.includes(s.toLowerCase())) {
       facts.sender = (s === "Rundfunkbeitrag") ? "Beitragsservice (GEZ)" : s;
+      facts.risk_flags.sender_looks_official = true;
       break;
     }
   }
 
-  // B. DATES & ROLES
+  // B. DOCUMENT TYPE & LEGAL STAGE
+  if (fullTextLower.includes('vollstreckungsbescheid') || fullTextLower.includes('mahnbescheid')) {
+    facts.doc_stage = 'mahnbescheid';
+    facts.risk_flags.is_court_order = true;
+  } else if (fullTextLower.includes('bescheid')) {
+    facts.doc_stage = 'bescheid';
+  } else if (fullTextLower.includes('anhörung')) {
+    facts.doc_stage = 'anhoerung';
+  } else if (fullTextLower.includes('mitwirkung')) {
+    facts.doc_stage = 'aufforderung_mitwirkung';
+  }
+
+  // C. LEGAL REMEDY (RECHTSBEHELFSBELEHRUNG)
+  if (fullTextLower.includes('rechtsbehelfsbelehrung') || fullTextLower.includes('rechtsmittelbelehrung')) {
+    facts.legal_remedy.present = true;
+    if (fullTextLower.includes('widerspruch')) facts.legal_remedy.type = 'widerspruch';
+    else if (fullTextLower.includes('einspruch')) facts.legal_remedy.type = 'einspruch';
+    else if (fullTextLower.includes('klage')) facts.legal_remedy.type = 'klage';
+  }
+
+  // D. ATTACHMENTS (ANLAGEN)
+  if (fullTextLower.includes('anlage') || fullTextLower.includes('beigefügt')) {
+    const anlageLines = lines.filter(l => l.toLowerCase().includes('anlage'));
+    facts.attachments = anlageLines.map(l => l.trim()).slice(0, 3);
+  }
+
+  // E. DATES & ROLES
   const dateRegex = /\b([0-3]?\d)\.([0-1]?\d)\.(\d{2,4})\b/g;
   const issuedAnchors = /bescheiddatum|datum|bekanntgabe|schreiben vom/i;
   const dueAnchors = /fällig am|zu zahlen bis|spätestens am|zahlungsziel/i;
@@ -221,10 +253,15 @@ export function buildAttentionModel(ocrText) {
   const sortedActions = [...facts.actions].sort((a, b) => a.priority - b.priority);
   const primaryAction = sortedActions[0]?.key || 'file';
 
+  // Bureaucratic Complexity Score
+  const paragraphCount = (ocrText.match(/§/g) || []).length;
+  const complexity = paragraphCount > 5 ? 'legalistic' : paragraphCount > 1 ? 'bureaucratic' : 'plain';
+
   return {
     facts,
     primaryAction,
-    urgency: (ocrText.toLowerCase().includes('mahnung') || ocrText.toLowerCase().includes('vollstreckung')) ? 'overdue' :
-             (facts.actions.some(a => a.key === 'attend' || a.key === 'respond')) ? 'urgent' : 'informational'
+    complexity,
+    urgency: (facts.risk_flags.is_court_order || ocrText.toLowerCase().includes('mahnung')) ? 'overdue' :
+             (facts.actions.some(a => a.key === 'attend' || a.key === 'respond') || facts.legal_remedy.present) ? 'urgent' : 'informational'
   };
 }
