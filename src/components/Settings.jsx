@@ -138,40 +138,6 @@ export default function Settings() {
         <LangSwitcher />
       </section>
 
-      {/* Performance Mode (Moved to NavBar dropdown, but keeping status here) */}
-      <section className="settings-card">
-        <h2>⚡ {t('settings.model_status')}</h2>
-
-        <div className="perf-mode-toggle">
-          <button
-            className={`btn ${isLite ? 'btn-outline' : 'btn-primary'}`}
-            onClick={() => handleModeChange('pro')}
-            style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
-          >
-            <span style={{ fontSize: '1.1rem' }}>{t('settings.pro_mode_title')}</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>{t('settings.pro_mode_desc')}</span>
-            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>{t('settings.pro_mode_vram')}</span>
-          </button>
-
-          <button
-            className={`btn ${isLite ? 'btn-primary' : 'btn-outline'}`}
-            onClick={() => handleModeChange('lite')}
-            style={{ flex: 1, flexDirection: 'column', height: 'auto', padding: '1rem' }}
-          >
-            <span style={{ fontSize: '1.1rem' }}>{t('settings.lite_mode_title')}</span>
-            <span style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 400 }}>{t('settings.lite_mode_desc')}</span>
-            <span style={{ fontSize: '0.6rem', opacity: 0.7, fontWeight: 400 }}>{t('settings.lite_mode_vram')}</span>
-          </button>
-        </div>
-
-        <p className="muted">{t('settings.model_status')}: <strong>{t(`model.${state.modelStatus}`)}</strong>{state.modelStatus === 'loading' && ` — ${state.modelProgress}%`}{state.modelStatus === 'ready' && ' ✅'}</p>
-        {state.modelStatus !== 'ready' && (
-          <button className="btn btn-primary" onClick={handleLoadModel} disabled={state.modelStatus === 'loading'}>
-            {state.modelStatus === 'loading' ? `${t('detail.loading')} ${state.modelProgress}%` : t('model.load_button')}
-          </button>
-        )}
-      </section>
-
       {/* Backup */}
       <section className="settings-card" style={{ borderLeft: '4px solid var(--accent)' }}>
         <h2>{t('settings.backup_title')}</h2>
