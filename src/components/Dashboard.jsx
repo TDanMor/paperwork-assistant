@@ -38,10 +38,14 @@ export default function Dashboard() {
     if (grouped.upcoming.length > 0) parts.push(t('dashboard.summary_upcoming').replace('{count}', grouped.upcoming.length));
     if (grouped.informational.length > 0) parts.push(t('dashboard.summary_informational').replace('{count}', grouped.informational.length));
 
+    // Simple pluralization for English/Romanian style (s) and German style (e/s)
+    const suffix = state.language === 'de' ? (totalActive === 1 ? 's' : '') : (totalActive === 1 ? '' : 's');
+    const pluralSuffix = state.language === 'de' ? (totalActive === 1 ? '' : 'e') : (totalActive === 1 ? '' : 's');
+
     summaryText = t('dashboard.summary_prefix')
       .replace('{total}', totalActive)
-      .replace('{suffix}', totalActive === 1 ? '' : 's')
-      .replace('{plural_suffix}', totalActive === 1 ? '' : 'e')
+      .replace('{suffix}', suffix)
+      .replace('{plural_suffix}', pluralSuffix)
       + ' ' + parts.join(', ') + '.';
   }
 

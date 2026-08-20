@@ -117,7 +117,7 @@ export default function Settings() {
   }
 
   async function handleResetWorkspace() {
-    if (confirmText !== 'CLEAR LOCAL WORKSPACE') return;
+    if (confirmText !== t('settings.reset_confirm_phrase')) return;
     await clearAllDocuments();
     dispatch({ type: 'SET_DOCUMENTS', documents: [] });
     localStorage.removeItem('pa_lang');
@@ -170,7 +170,7 @@ export default function Settings() {
         </div>
 
         <p className="muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Model ID: {activeModelId}</p>
-        <p className="muted">{t('settings.model_status')}: <strong>{state.modelStatus}</strong>{state.modelStatus === 'loading' && ` — ${state.modelProgress}%`}{state.modelStatus === 'ready' && ' ✅'}</p>
+        <p className="muted">{t('settings.model_status')}: <strong>{t(`model.${state.modelStatus}`)}</strong>{state.modelStatus === 'loading' && ` — ${state.modelProgress}%`}{state.modelStatus === 'ready' && ' ✅'}</p>
         {state.modelStatus !== 'ready' && (
           <button className="btn btn-primary" onClick={handleLoadModel} disabled={state.modelStatus === 'loading'}>
             {state.modelStatus === 'loading' ? `${t('detail.loading')} ${state.modelProgress}%` : t('model.load_button')}
@@ -205,9 +205,9 @@ export default function Settings() {
       <section className="settings-card settings-card--danger">
         <h2>{t('settings.reset_title')}</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-          <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('settings.reset_confirm_label')} <span style={{ fontFamily: 'monospace', color: 'var(--c-overdue)' }}>CLEAR LOCAL WORKSPACE</span></label>
-          <input type="text" value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder="CLEAR LOCAL WORKSPACE" style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', maxWidth: '320px' }} />
-          <button className="btn btn-danger" disabled={confirmText !== 'CLEAR LOCAL WORKSPACE'} onClick={handleResetWorkspace}>{t('settings.reset_btn')}</button>
+          <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>{t('settings.reset_confirm_label')} <span style={{ fontFamily: 'monospace', color: 'var(--c-overdue)' }}>{t('settings.reset_confirm_phrase')}</span></label>
+          <input type="text" value={confirmText} onChange={e => setConfirmText(e.target.value)} placeholder={t('settings.reset_confirm_phrase')} style={{ padding: '0.5rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', fontSize: '0.85rem', maxWidth: '320px' }} />
+          <button className="btn btn-danger" disabled={confirmText !== t('settings.reset_confirm_phrase')} onClick={handleResetWorkspace}>{t('settings.reset_btn')}</button>
         </div>
       </section>
     </div>

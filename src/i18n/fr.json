@@ -16,7 +16,9 @@
     "ready": "IA Prête",
     "error": "Erreur IA",
     "retry": "Réessayer",
-    "starting": "Démarrage…"
+    "starting": "Démarrage…",
+    "idle": "Non chargée",
+    "loading": "Chargement"
   },
   "upload": {
     "title": "Ajouter un Document",
@@ -136,6 +138,7 @@
     "backup_decrypt_error": "❌ Échec. Mot de passe incorrect.",
     "reset_title": "⚠️ Réinitialiser l'espace",
     "reset_confirm_label": "Tapez la confirmation :",
+    "reset_confirm_phrase": "EFFACER ESPACE LOCAL",
     "reset_btn": "🗑️ Tout supprimer",
     "reset_done": "Espace réinitialisé."
   },

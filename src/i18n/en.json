@@ -16,11 +16,13 @@
     "ready": "AI Ready",
     "error": "AI failed to load",
     "retry": "Retry",
-    "starting": "Starting…"
+    "starting": "Starting…",
+    "idle": "Not loaded",
+    "loading": "Loading"
   },
   "upload": {
     "title": "Upload Document",
-    "drop_hint": "Drop a PDF or image here, or click to browse",
+    "drop_hint": "Drop multiple PDFs or images here, or click to browse",
     "select_file": "Select File",
     "processing_ocr": "Reading document text…",
     "processing_ai": "AI is analysing the document…",
@@ -136,6 +138,7 @@
     "backup_decrypt_error": "❌ Decryption failed. Incorrect password.",
     "reset_title": "⚠️ Reset Local Workspace",
     "reset_confirm_label": "Type confirmation:",
+    "reset_confirm_phrase": "CLEAR LOCAL WORKSPACE",
     "reset_btn": "🗑️ Delete Local Workspace",
     "reset_done": "Workspace cleared."
   },

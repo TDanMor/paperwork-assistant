@@ -16,7 +16,9 @@
     "ready": "IA Lista",
     "error": "Error al cargar la IA",
     "retry": "Reintentar",
-    "starting": "Iniciando…"
+    "starting": "Iniciando…",
+    "idle": "No cargado",
+    "loading": "Cargando"
   },
   "upload": {
     "title": "Subir Documento",
@@ -136,6 +138,7 @@
     "backup_decrypt_error": "❌ El descifrado falló. Contraseña incorrecta.",
     "reset_title": "⚠️ Restablecer Espacio de Trabajo Local",
     "reset_confirm_label": "Escriba confirmación:",
+    "reset_confirm_phrase": "BORRAR ESPACIO LOCAL",
     "reset_btn": "🗑️ Eliminar Espacio de Trabajo Local",
     "reset_done": "Espacio de trabajo borrado."
   },

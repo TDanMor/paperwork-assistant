@@ -16,7 +16,9 @@
     "ready": "KI Bereit",
     "error": "Fehler beim Laden",
     "retry": "Wiederholen",
-    "starting": "Startet…"
+    "starting": "Startet…",
+    "idle": "Nicht geladen",
+    "loading": "Lädt"
   },
   "upload": {
     "title": "Dokument hochladen",
@@ -65,7 +67,10 @@
   "folders": {
     "title": "Ordner",
     "all": "Alle Dokumente",
-    "no_docs": "Keine Dokumente in diesem Ordner."
+    "no_docs": "Keine Dokumente in diesem Ordner.",
+    "search_placeholder": "Dokumente suchen...",
+    "search_results": "Suchergebnisse",
+    "no_matches": "Keine Treffer gefunden."
   },
   "detail": {
     "sender": "Absender",
@@ -88,7 +93,8 @@
     "none_saved": "Keine Originaldatei für dieses Dokument gespeichert.",
     "done_note_prompt": "Optionale Notiz hinzufügen (z. B. 'Per Banküberweisung bezahlt'):",
     "done_note_label": "Notiz: ",
-    "calendar_add": "Zum Google Kalender hinzufügen"
+    "calendar_add": "Zum Google Kalender hinzufügen",
+    "unknown_sender": "Unbekannt"
   },
   "vault": {
     "title": "Persönlicher Tresor gesperrt",
@@ -104,11 +110,37 @@
   "settings": {
     "title": "Einstellungen",
     "language": "Sprache",
+    "language_subtitle": "Wählen Sie Ihre bevorzugte Sprache für Zusammenfassungen und KI-Analysen.",
     "ai_model": "KI-Modell",
+    "ai_pro_title": "🏆 Pro Modus",
+    "ai_pro_desc": "Llama 3.2 3B (Beste Genauigkeit)",
+    "ai_pro_vram": "Benötigt 4GB+ VRAM",
+    "ai_lite_title": "⚡ Lite Modus",
+    "ai_lite_desc": "Llama 3.2 1B (Hohe Stabilität)",
+    "ai_lite_vram": "Perfekt für Handys & Tablets",
+    "ai_mode_confirm": "Das Ändern des KI-Modus erfordert das erneute Laden des Modells (~1-2 GB). Fortfahren?",
+    "ai_switched_msg": "Modus gewechselt. Bereit zum Neuladen.",
     "model_status": "Status",
     "requirements": "Systemanforderungen",
     "clear_data": "Alle Daten löschen",
-    "clear_confirm": "Sicher? Alle Dokumente werden unwiderruflich gelöscht."
+    "clear_confirm": "Sicher? Alle Dokumente werden unwiderruflich gelöscht.",
+    "backup_title": "🔒 Verschlüsseltes Backup & Wiederherstellung",
+    "backup_create_title": "Verschlüsseltes Backup erstellen",
+    "backup_restore_title": "Backup wiederherstellen",
+    "backup_pass_placeholder": "Passwort (min. 10 Zeichen)",
+    "backup_restore_pass_placeholder": "Backup-Passwort",
+    "backup_download_btn": "🔐 Backup herunterladen",
+    "backup_restore_btn": "🔓 Wiederherstellen",
+    "backup_success": "Verschlüsseltes Backup erfolgreich heruntergeladen!",
+    "backup_pass_error": "Das Passwort muss mindestens 10 Zeichen lang sein.",
+    "backup_decrypting": "Entschlüssele...",
+    "backup_restore_success": "✅ Erfolgreich wiederhergestellt!",
+    "backup_decrypt_error": "❌ Entschlüsselung fehlgeschlagen. Falsches Passwort.",
+    "reset_title": "⚠️ Lokalen Workspace zurücksetzen",
+    "reset_confirm_label": "Bestätigung eingeben:",
+    "reset_confirm_phrase": "WORKSPACE LÖSCHEN",
+    "reset_btn": "🗑️ Lokalen Workspace löschen",
+    "reset_done": "Workspace gelöscht."
   },
   "categories": {
     "Insurance": "Versicherung",
@@ -162,5 +194,19 @@
     "checking": "GPU-Fähigkeit wird geprüft...",
     "error": "GPU-Erkennungsfehler",
     "mobile_limitation": "Ihr aktueller Browser oder Ihr Gerät unterstützt WebGPU nicht. Lokale KI ist möglicherweise eingeschränkt."
+  },
+  "months": {
+    "jan": "Januar",
+    "feb": "Februar",
+    "mar": "März",
+    "apr": "April",
+    "may": "Mai",
+    "jun": "Juni",
+    "jul": "Juli",
+    "aug": "August",
+    "sep": "September",
+    "oct": "Oktober",
+    "nov": "November",
+    "dec": "Dezember"
   }
 }

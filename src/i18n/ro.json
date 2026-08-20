@@ -16,7 +16,9 @@
     "ready": "AI Pregătit",
     "error": "Încărcarea AI a eșuat",
     "retry": "Reîncearcă",
-    "starting": "Se pornește…"
+    "starting": "Se pornește…",
+    "idle": "Neîncărcat",
+    "loading": "Se încarcă"
   },
   "upload": {
     "title": "Încărcare Document",
@@ -121,7 +123,24 @@
     "model_status": "Status",
     "requirements": "Cerințe",
     "clear_data": "Șterge toate datele",
-    "clear_confirm": "Sunteți sigur? Această acțiune șterge definitiv toate documentele."
+    "clear_confirm": "Sunteți sigur? Această acțiune șterge definitiv toate documentele.",
+    "backup_title": "🔒 Copie de Siguranță Cifrată și Restaurare",
+    "backup_create_title": "Creare Copie de Siguranță Cifrată",
+    "backup_restore_title": "Restaurare Copie de Siguranță",
+    "backup_pass_placeholder": "Parolă (min 10 caractere)",
+    "backup_restore_pass_placeholder": "Parola copiei de siguranță",
+    "backup_download_btn": "🔐 Descarcă Copia",
+    "backup_restore_btn": "🔓 Restaurare",
+    "backup_success": "Copia de siguranță cifrată a fost descărcată cu succes!",
+    "backup_pass_error": "Parola trebuie să aibă cel puțin 10 caractere.",
+    "backup_decrypting": "Se decriptează...",
+    "backup_restore_success": "✅ Restaurat cu succes!",
+    "backup_decrypt_error": "❌ Decriptare eșuată. Parolă incorectă.",
+    "reset_title": "⚠️ Resetare Spațiu de Lucru Local",
+    "reset_confirm_label": "Introduceți confirmarea:",
+    "reset_confirm_phrase": "ȘTERGE SPAȚIUL DE LUCRU",
+    "reset_btn": "🗑️ Șterge Spațiul de Lucru Local",
+    "reset_done": "Spațiul de lucru a fost șters."
   },
   "categories": {
     "Insurance": "Asigurări",
