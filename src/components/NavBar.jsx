@@ -48,37 +48,42 @@ export default function NavBar() {
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, justifyContent: 'flex-end', minWidth: '220px' }}>
         <div className="perf-toggle-container">
           <div className="perf-dropdown-wrapper">
             <div className="perf-trigger">
               <span className="perf-current-title">
-                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.lite_mode_title') : t('settings.pro_mode_title')}
+                {activeModelId === MODELS.lite ? '⚡' : '🏆'} {activeModelId === MODELS.lite ? t('settings.lite_title') : t('settings.pro_title')}
               </span>
               <span className="perf-current-subtitle">
-                {isLite ? t('settings.lite_mode_vram') : t('settings.pro_mode_vram')}
+                {activeModelId === MODELS.lite ? t('settings.lite_vram') : t('settings.pro_vram')}
               </span>
             </div>
             <div className="perf-dropdown-menu">
               <button
-                className={`perf-option ${!isLite ? 'perf-option--active' : ''}`}
-                onClick={() => isLite && handleModeChange({ target: { value: 'pro' } })}
+                className={`perf-option ${activeModelId !== MODELS.lite ? 'perf-option--active' : ''}`}
+                onClick={() => activeModelId === MODELS.lite && handleModeChange({ target: { value: 'pro' } })}
               >
-                <span className="perf-title">🏆 {t('settings.pro_mode_title')}</span>
-                <span className="perf-desc">{t('settings.pro_mode_desc')}</span>
-                <span className="perf-vram">{t('settings.pro_mode_vram')}</span>
+                <span className="perf-title">🏆 {t('settings.pro_title')}</span>
+                <span className="perf-desc">{t('settings.pro_desc')}</span>
+                <span className="perf-vram">{t('settings.pro_vram')}</span>
               </button>
               <button
-                className={`perf-option ${isLite ? 'perf-option--active' : ''}`}
-                onClick={() => !isLite && handleModeChange({ target: { value: 'lite' } })}
+                className={`perf-option ${activeModelId === MODELS.lite ? 'perf-option--active' : ''}`}
+                onClick={() => activeModelId !== MODELS.lite && handleModeChange({ target: { value: 'lite' } })}
               >
-                <span className="perf-title">⚡ {t('settings.lite_mode_title')}</span>
-                <span className="perf-desc">{t('settings.lite_mode_desc')}</span>
-                <span className="perf-vram">{t('settings.lite_mode_vram')}</span>
+                <span className="perf-title">⚡ {t('settings.lite_title')}</span>
+                <span className="perf-desc">{t('settings.lite_desc')}</span>
+                <span className="perf-vram">{t('settings.lite_vram')}</span>
               </button>
             </div>
           </div>
         </div>
+
+        <GpuGuard />
+
+        <LangSwitcher variant="compact" />
+      </div>
 
         <GpuGuard />
 

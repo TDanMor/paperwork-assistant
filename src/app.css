@@ -124,8 +124,9 @@ body {
 .navbar-links {
   display: flex;
   gap: .25rem;
-  justify-content: center; /* Center links in their container */
-  flex: 1; /* Allow container to grow and center its content */
+  justify-content: center;
+  flex: 1;
+  min-width: 0; /* Prevent links from pushing others out */
 }
 .navbar-version {
   font-size: 0.7rem;
