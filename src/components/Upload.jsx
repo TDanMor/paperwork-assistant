@@ -49,14 +49,14 @@ export default function Upload() {
             if (state.modelStatus === 'error') {
               dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('upload.gpu_reset') });
             }
-            updateItem(item.id, { status: 'processing_ai', progress: 65, errorMsg: t('upload.waiting_gpu') });
+            updateItem(item.id, { status: 'processing_engine', progress: 65, errorMsg: t('upload.waiting_gpu') });
             await new Promise(r => setTimeout(r, 2000));
             waitSeconds += 2;
           }
 
           // B. Attempt Analysis
           try {
-            updateItem(item.id, { status: 'processing_ai', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
+            updateItem(item.id, { status: 'processing_engine', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
 
             const sys = buildSystemPrompt(state.language);
 
@@ -176,7 +176,7 @@ export default function Upload() {
                   <p className="muted" style={{ fontSize: '0.75rem', margin: 0 }}>
                     {item.status === 'pending' && t('upload.status_pending')}
                     {item.status === 'processing_ocr' && t('upload.status_ocr')}
-                    {item.status === 'processing_ai' && (item.errorMsg || t('upload.status_ai'))}
+                    {item.status === 'processing_engine' && (item.errorMsg || t('upload.status_engine'))}
                     {item.status === 'saving' && t('upload.status_saving')}
                     {item.status === 'done' && t('upload.status_done')}
                     {item.status === 'error' && `${t('model.error')}: ${item.errorMsg}`}
@@ -198,7 +198,7 @@ export default function Upload() {
 
                   {item.status === 'error' && <span style={{ color: 'var(--c-overdue)', fontSize: '0.8rem', fontWeight: 700 }}>{t('upload.badge_failed')}</span>}
                   {item.status === 'done' && !item.aiFailed && <span style={{ color: 'var(--c-informational)', fontSize: '0.8rem', fontWeight: 700 }}>✅ {t('upload.badge_done')}</span>}
-                  {item.status === 'done' && item.aiFailed && <span style={{ color: 'var(--c-urgent)', fontSize: '0.8rem', fontWeight: 700 }}>⚠️ {t('upload.badge_ai_unavailable')}</span>}
+                  {item.status === 'done' && item.aiFailed && <span style={{ color: 'var(--c-urgent)', fontSize: '0.8rem', fontWeight: 700 }}>⚠️ {t('upload.badge_unavailable')}</span>}
                 </div>
 
               </div>

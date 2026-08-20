@@ -579,29 +579,100 @@ body {
   align-items: center;
 }
 
-.perf-dropdown {
+.perf-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.perf-trigger {
   display: flex;
   flex-direction: column;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   cursor: pointer;
   min-width: 140px;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  text-align: left;
 }
 
-.perf-dropdown:hover {
+.perf-trigger:hover {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.perf-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 0.5rem;
+  z-index: 300;
+  display: none;
+  width: 260px;
+}
+
+.perf-dropdown-wrapper:hover .perf-dropdown-menu {
+  display: block;
+}
+
+.perf-option {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+  margin-bottom: 0.25rem;
+  text-align: left;
+  background: none;
+  width: 100%;
+}
+
+.perf-option:last-child {
+  margin-bottom: 0;
+}
+
+.perf-option:hover {
+  background: var(--accent-light);
   border-color: var(--accent);
 }
 
-.perf-current {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
+.perf-option--active {
+  background: var(--accent-light);
+  border-color: var(--accent);
 }
 
 .perf-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.perf-desc {
+  font-size: 0.75rem;
+  color: var(--text);
+  margin-top: 0.1rem;
+}
+
+.perf-vram {
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.perf-current-title {
   font-weight: 700;
   font-size: 0.85rem;
   color: var(--text);
@@ -610,20 +681,10 @@ body {
   gap: 0.3rem;
 }
 
-.perf-subtitle {
+.perf-current-subtitle {
   font-size: 0.65rem;
   color: var(--muted);
   white-space: nowrap;
-}
-
-.perf-select-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
 }
 
 /* ============================================================

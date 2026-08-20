@@ -49,24 +49,33 @@ export default function NavBar() {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div className="perf-toggle-container">
-          <div className="perf-dropdown">
-            <div className="perf-current">
-              <span className="perf-title">
-                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.ai_lite_title') : t('settings.ai_pro_title')}
+          <div className="perf-dropdown-wrapper">
+            <div className="perf-trigger">
+              <span className="perf-current-title">
+                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.lite_title') : t('settings.pro_title')}
               </span>
-              <span className="perf-subtitle">
-                {isLite ? t('settings.ai_lite_vram') : t('settings.ai_pro_vram')}
+              <span className="perf-current-subtitle">
+                {isLite ? t('settings.lite_vram') : t('settings.pro_vram')}
               </span>
             </div>
-            <select
-              className="perf-select-overlay"
-              value={isLite ? 'lite' : 'pro'}
-              onChange={handleModeChange}
-              title={t('settings.ai_model')}
-            >
-              <option value="pro">🏆 {t('settings.ai_pro_title')} ({t('settings.ai_pro_vram')})</option>
-              <option value="lite">⚡ {t('settings.ai_lite_title')} ({t('settings.ai_lite_vram')})</option>
-            </select>
+            <div className="perf-dropdown-menu">
+              <button
+                className={`perf-option ${!isLite ? 'perf-option--active' : ''}`}
+                onClick={() => isLite && handleModeChange({ target: { value: 'pro' } })}
+              >
+                <span className="perf-title">🏆 {t('settings.pro_title')}</span>
+                <span className="perf-desc">{t('settings.pro_desc')}</span>
+                <span className="perf-vram">{t('settings.pro_vram')}</span>
+              </button>
+              <button
+                className={`perf-option ${isLite ? 'perf-option--active' : ''}`}
+                onClick={() => !isLite && handleModeChange({ target: { value: 'lite' } })}
+              >
+                <span className="perf-title">⚡ {t('settings.lite_title')}</span>
+                <span className="perf-desc">{t('settings.lite_desc')}</span>
+                <span className="perf-vram">{t('settings.lite_vram')}</span>
+              </button>
+            </div>
           </div>
         </div>
 
