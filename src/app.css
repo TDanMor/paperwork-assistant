@@ -84,18 +84,46 @@ body {
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Change to space-between to handle logo, center-links, and version */
+  justify-content: space-between;
   padding: 0 1.5rem;
   box-shadow: var(--shadow-sm);
 }
-.navbar-brand {
+
+.navbar-brand-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 0 0 auto;
+  line-height: 1.1;
+}
+
+.navbar-brand-main {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.navbar-brand-icon {
+  font-size: 1.3rem;
+}
+
+.navbar-brand-text {
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: var(--accent);
   letter-spacing: -.02em;
   white-space: nowrap;
-  flex: 0 0 160px; /* Give logo some width to balance layout */
 }
+
+.navbar-version-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  font-family: monospace;
+  opacity: 0.6;
+  margin-top: 0.1rem;
+  padding-left: 1.8rem; /* Align under the text, offset by icon width approx */
+}
+
 .navbar-links {
   display: flex;
   gap: .25rem;

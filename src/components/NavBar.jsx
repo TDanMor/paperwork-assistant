@@ -27,7 +27,14 @@ export default function NavBar() {
 
   return (
     <nav className="navbar">
-      <span className="navbar-brand">📄 {t('app_title')}</span>
+      <div className="navbar-brand-container">
+        <div className="navbar-brand-main">
+          <span className="navbar-brand-icon">🤵</span>
+          <span className="navbar-brand-text">{t('app_title')}</span>
+        </div>
+        <span className="navbar-version-label">v:{__APP_VERSION__}</span>
+      </div>
+
       <div className="navbar-links">
         {NAV_ITEMS.map(item => (
           <button
@@ -52,7 +59,6 @@ export default function NavBar() {
         </select>
 
         <LangSwitcher variant="compact" />
-        <span className="navbar-version">v:{__APP_VERSION__}</span>
       </div>
     </nav>
   );
