@@ -48,15 +48,27 @@ export default function NavBar() {
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <select
-          className="lang-select"
-          value={isLite ? 'lite' : 'pro'}
-          onChange={handleModeChange}
-          style={{ fontSize: '0.8rem', padding: '0.2rem 0.4rem' }}
-        >
-          <option value="pro">🏆 {t('settings.ai_pro_title')} ({t('settings.ai_pro_desc')})</option>
-          <option value="lite">⚡ {t('settings.ai_lite_title')} ({t('settings.ai_lite_desc')})</option>
-        </select>
+        <div className="perf-toggle-container">
+          <div className="perf-dropdown">
+            <div className="perf-current">
+              <span className="perf-title">
+                {isLite ? '⚡' : '🏆'} {isLite ? t('settings.ai_lite_title') : t('settings.ai_pro_title')}
+              </span>
+              <span className="perf-subtitle">
+                {isLite ? t('settings.ai_lite_vram') : t('settings.ai_pro_vram')}
+              </span>
+            </div>
+            <select
+              className="perf-select-overlay"
+              value={isLite ? 'lite' : 'pro'}
+              onChange={handleModeChange}
+              title={t('settings.ai_model')}
+            >
+              <option value="pro">🏆 {t('settings.ai_pro_title')} ({t('settings.ai_pro_vram')})</option>
+              <option value="lite">⚡ {t('settings.ai_lite_title')} ({t('settings.ai_lite_vram')})</option>
+            </select>
+          </div>
+        </div>
 
         <LangSwitcher variant="compact" />
       </div>
