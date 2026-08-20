@@ -17,13 +17,16 @@ Factual Context:
 - Multiple Obligations: [${actionsStr}]
 - Appeal Possible: ${remedyStr}
 - Attachments found: ${facts.attachments.length}
+- Historical Change: ${attentionModel.amountChanged ? 'Yes (Amount has changed from previous doc)' : 'No'}
+- Action Location: ${facts.addresses.action || 'Not specified'}
 
 Your job is only to EXPLAIN these facts to the user in simple ${langName}.
 Rules:
 1. Explain WHAT this is (e.g. ${facts.doc_stage}).
 2. Explain the legal weight (Is it a court order? A friendly reminder?).
-3. Mention any attachments the user should look for.
-4. Do NOT change the actions or numbers.
+3. Mention any attachments or action locations found.
+4. If amount has changed historically, point this out.
+5. Do NOT change the actions or numbers.
 5. Output ONLY a FLAT JSON object.
 
 JSON Schema: {summary, action_steps_explanation}`;

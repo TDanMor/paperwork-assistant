@@ -59,8 +59,8 @@ export default function Upload() {
           try {
             updateItem(item.id, { status: 'processing_engine', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
 
-            // 1. Build Deterministic Attention Model
-            const attentionModel = buildAttentionModel(ocrText);
+            // 1. Build Deterministic Attention Model (with access to previous docs for comparison)
+            const attentionModel = buildAttentionModel(ocrText, state.documents);
 
             // 2. Build Injected Prompt
             const sys  = buildSystemPrompt(state.language, attentionModel);
