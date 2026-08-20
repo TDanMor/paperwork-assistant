@@ -91,16 +91,15 @@ body {
 
 .navbar-brand-container {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex: 0 0 auto;
-  line-height: 1.1;
-}
-
-.navbar-brand-main {
-  display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.navbar-brand-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
 }
 
 .navbar-brand-icon {
@@ -120,8 +119,6 @@ body {
   color: var(--muted);
   font-family: monospace;
   opacity: 0.6;
-  margin-top: 0.1rem;
-  padding-left: 1.8rem; /* Align under the text, offset by icon width approx */
 }
 
 .navbar-links {

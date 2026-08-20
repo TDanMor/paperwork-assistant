@@ -28,11 +28,11 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand-container">
-        <div className="navbar-brand-main">
-          <span className="navbar-brand-icon">🤵</span>
+        <span className="navbar-brand-icon">🤵</span>
+        <div className="navbar-brand-info">
           <span className="navbar-brand-text">{t('app_title')}</span>
+          <span className="navbar-version-label">v:{__APP_VERSION__}</span>
         </div>
-        <span className="navbar-version-label">v:{__APP_VERSION__}</span>
       </div>
 
       <div className="navbar-links">
