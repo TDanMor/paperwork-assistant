@@ -31,16 +31,26 @@ export default function Onboarding({ onFinish }) {
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: 'var(--bg)',
       zIndex: 9999,
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      padding: '2rem',
-      textAlign: 'center',
-      overflowY: 'auto'
+      display: 'flex', 
+      overflowY: 'auto',
+      padding: '2rem 1rem'
     }}>
+      {/* Outer Global Watermark */}
       <div style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '120vmin', height: '120vmin',
+        backgroundImage: 'url("/logo-round.png")',
+        backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+        opacity: 0.04, zIndex: -1, pointerEvents: 'none'
+      }}></div>
+
+      <div style={{
+        margin: 'auto', /* Centers safely without breaking scroll */
         maxWidth: '550px', width: '100%',
         background: 'var(--surface)',
         position: 'relative',
-        padding: '2.5rem',
+        padding: '2rem', /* Reduced from 2.5rem to save vertical space */
         borderRadius: '16px',
         boxShadow: 'var(--shadow-xl)',
         border: '1px solid var(--border)',
@@ -63,14 +73,14 @@ export default function Onboarding({ onFinish }) {
         
         {phase === 'welcome' && (
           <>
-            <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>
+            <h1 style={{ fontSize: '1.65rem', marginBottom: '0.25rem', color: 'var(--primary)' }}>
               {t('onboarding.welcome_title')}
             </h1>
-            <p className="muted" style={{ marginBottom: '2rem', fontSize: '1rem' }}>
+            <p className="muted" style={{ marginBottom: '1.5rem', fontSize: '0.95rem' }}>
               {t('onboarding.welcome_subtitle')}
             </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', width: '100%', textAlign: 'left', marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%', textAlign: 'left', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
                 <span style={{ fontSize: '1.5rem' }}>🔒</span>
                 <div>
@@ -94,7 +104,7 @@ export default function Onboarding({ onFinish }) {
               </div>
             </div>
 
-            <div style={{ width: '100%', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'rgba(0,0,0,0.03)', borderRadius: '8px' }}>
+            <div style={{ width: '100%', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: 'rgba(0,0,0,0.03)', borderRadius: '8px' }}>
               <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{t('onboarding.select_language')}:</span>
               <select 
                 value={state.language} 
@@ -113,7 +123,7 @@ export default function Onboarding({ onFinish }) {
               {t('onboarding.scan_notice')}
             </p>
 
-            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '0.6rem 1rem', borderRadius: '6px', marginBottom: '1.5rem', width: '100%' }}>
+            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '0.5rem 1rem', borderRadius: '6px', marginBottom: '1.25rem', width: '100%' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8, display: 'block' }}>
                 {t('onboarding.scan_requirements')}
               </span>
