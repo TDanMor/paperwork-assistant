@@ -1,7 +1,7 @@
 # Paperwork Assistant: Master Project Context & Architecture Specification
 
 ## 1. Core Vision & Product Goal
-Paperwork Assistant is an offline-first, local-first personal document intelligence application. Its mission is to eliminate paperwork anxiety and administrative guesswork by ingesting complex foreign or domestic documents (invoices, tax bills, municipal notices, employment contracts), running local OCR, and using an on-device local engine (Llama-3.2 via WebLLM/WebGPU) combined with high-precision deterministic extractors to produce zero-guesswork actionable intelligence in the user's preferred language.
+Paperwork Assistant is an offline-first, local-first personal document intelligence application. Its mission is to eliminate paperwork anxiety and administrative guesswork by ingesting complex foreign or domestic documents (invoices, tax bills, municipal notices, employment contracts), running local OCR, and using an on-device local engine (Phi-3.5-Mini / Qwen2.5-1.5B via WebLLM/WebGPU) combined with high-precision deterministic extractors to produce zero-guesswork actionable intelligence in the user's preferred language.
 
 Live Deployment: [https://paperworkassistant.pages.dev/](https://paperworkassistant.pages.dev/)
 
