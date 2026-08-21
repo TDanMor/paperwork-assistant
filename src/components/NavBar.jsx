@@ -30,7 +30,7 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-brand-container">
-        <span className="navbar-brand-icon">🤵</span>
+        <img src="/logo-round.png" alt="Logo" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
         <div className="navbar-brand-info">
           <span className="navbar-brand-text">{t('app_title')}</span>
           <span className="navbar-version-label">v:{__APP_VERSION__}</span>

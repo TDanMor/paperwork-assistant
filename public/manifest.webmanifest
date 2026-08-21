@@ -12,15 +12,15 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
+      "src": "/logo-round.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any"
     },
     {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "any",
+      "src": "/logo-round.png",
+      "type": "image/png",
+      "sizes": "192x192",
       "purpose": "maskable"
     }
   ],
