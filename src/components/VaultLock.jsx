@@ -58,13 +58,31 @@ export default function VaultLock() {
   };
 
   return (
-    <div className="status-card" style={{ maxWidth: '400px', margin: '4rem auto' }}>
-      <div className="result-card__icon">🔐</div>
-      <h2>{t('vault.title')}</h2>
+    <div className="status-card" style={{ maxWidth: '400px', margin: '4rem auto', position: 'relative', overflow: 'hidden' }}>
+      {/* Subtle Background Watermark */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '80%',
+        height: '80%',
+        backgroundImage: "url('/logo-round.png')",
+        backgroundSize: 'contain',
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center',
+        opacity: 0.04,
+        zIndex: 0,
+        pointerEvents: 'none'
+      }}></div>
 
-      <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('vault.description')}</p>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div className="result-card__icon">🔐</div>
+        <h2>{t('vault.title')}</h2>
 
-      <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+        <p className="muted" style={{ fontSize: '0.85rem', marginBottom: '1.5rem' }}>{t('vault.description')}</p>
+
+        <form onSubmit={handleUnlock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
         <input
           type="password"
           placeholder="000000"
@@ -94,6 +112,7 @@ export default function VaultLock() {
       >
         {t('vault.reset_label')}
       </button>
+      </div>
     </div>
   );
 }
