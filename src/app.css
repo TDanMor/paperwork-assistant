@@ -606,199 +606,6 @@ button, [role="button"], a, input, select, textarea, label,
 }
 
 /* ============================================================
-   RESPONSIVE
-============================================================ */
-@media (max-width: 1024px) {
-  .main-content { max-width: 100%; padding: 1.5rem 1.1rem; }
-  .kanban-board { grid-template-columns: repeat(2, 1fr); }
-}
-
-/* ============================================================
-   TABLET — 641px to 1024px
-   Top nav stays. 2-col grid. Touch targets ≥ 44px.
-============================================================ */
-@media (min-width: 641px) and (max-width: 1024px) {
-  .tile-grid { grid-template-columns: repeat(2, 1fr); }
-  .nav-btn { padding: .4rem .75rem; font-size: .82rem; }
-  .btn { min-height: 44px; }
-  .task-tile { padding: 1.1rem 1.2rem; }
-  .folder-btn { padding: 1.5rem 1rem; }
-}
-
-/* ============================================================
-   TABLET PORTRAIT — up to 768px
-   Detail layout stacks, perf dropdown moves left.
-============================================================ */
-@media (max-width: 768px) {
-  .detail-layout { flex-direction: column-reverse; }
-  .detail-preview { position: static; width: 100%; }
-  .doc-preview-media { height: 50vh; }
-  .perf-dropdown-menu { right: auto; left: 0; }
-}
-
-/* ============================================================
-   MOBILE PHONE — up to 640px
-   Bottom navigation bar. Compact top bar. iOS safe areas.
-============================================================ */
-@media (max-width: 640px) {
-
-  /* Compact top bar — brand + right controls only */
-  .navbar {
-    position: static;
-    padding: 0 1rem;
-    height: 54px;
-    min-height: 54px;
-    flex-wrap: nowrap;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-
-  /* 
-   * Detach nav links from the top bar and fix them to the bottom.
-   * `position: fixed` removes them from the navbar's flex flow —
-   * the top bar naturally collapses to brand + controls only.
-   */
-  .navbar-links {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 250;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    align-items: stretch;
-    /* Solid background as universal fallback (works on all Android versions) */
-    background: rgba(255, 255, 255, 0.97);
-    border-top: 1px solid var(--border);
-    border-top-left-radius: 14px;
-    border-top-right-radius: 14px;
-    box-shadow: 0 -2px 24px rgba(10,25,60,.10);
-    /* iOS home indicator clearance */
-    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
-    /* Override tablet reordering */
-    order: unset;
-    width: auto;
-    margin-top: 0;
-    flex: none;
-  }
-  /* Frosted glass only where supported (Android 76+, iOS 15+, modern desktop) */
-  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-    .navbar-links {
-      background: rgba(255, 255, 255, 0.88);
-      -webkit-backdrop-filter: blur(18px) saturate(180%);
-      backdrop-filter: blur(18px) saturate(180%);
-    }
-  }
-
-  /* Prevent iOS and Android from zooming into inputs on focus.
-     Any input with font-size < 16px triggers auto-zoom on both platforms. */
-  input, select, textarea { font-size: 16px; }
-
-  /* Nav buttons: vertical stack (icon on top, label below) */
-  .nav-btn {
-    flex-direction: column;
-    gap: 0.12rem;
-    padding: 0.5rem 0.85rem 0.4rem;
-    min-height: 54px;
-    flex: 1;
-    border-radius: var(--radius-sm);
-    align-items: center;
-    justify-content: center;
-    font-size: 0.6rem;
-  }
-  .nav-icon { font-size: 1.45rem; }
-
-  /* Re-show labels in the bottom tab bar */
-  .nav-label {
-    display: block;
-    font-size: 0.6rem;
-    font-weight: 600;
-    letter-spacing: .02em;
-  }
-
-  /* Hide perf dropdown in top bar on mobile — accessible from Settings */
-  .perf-dropdown-wrapper { display: none; }
-
-  /* Override inline min-width on the right-side navbar div */
-  .navbar > div:last-child {
-    min-width: auto !important;
-    gap: 0.5rem !important;
-  }
-
-  /* Extra bottom padding: bottom nav height + safe area */
-  .main-content {
-    padding: 1rem 0.85rem calc(80px + env(safe-area-inset-bottom));
-  }
-
-  /* Top padding: clearance for status bar notches */
-  .app-wrapper {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  /* Single-column layouts */
-  .tile-grid     { grid-template-columns: 1fr; }
-  .folder-grid   { grid-template-columns: repeat(2, 1fr); }
-  .kanban-board  { grid-template-columns: 1fr; }
-
-  /* Typography */
-  .navbar-brand-text { font-size: 0.92rem; }
-  .navbar-brand-icon { font-size: 1.1rem; }
-  .page-title        { font-size: 1.25rem; }
-
-  /* Touch targets — WCAG 2.5.5 recommends 44×44px minimum */
-  .btn      { min-height: 44px; }
-  .btn-sm   { min-height: 38px; }
-  .doc-row  { padding: 1rem 1.1rem; }
-
-  /* Task tiles: comfortable thumb tap zone */
-  .task-tile {
-    padding: 1.15rem 1.1rem;
-    border-radius: var(--radius);
-  }
-
-  /* Upload dropzone: more vertical presence on a phone screen */
-  .dropzone {
-    padding: 2.75rem 1.5rem;
-    border-radius: var(--radius);
-  }
-
-  /* Document detail */
-  .detail-layout { flex-direction: column-reverse; }
-  .detail-preview { position: static; width: 100%; }
-  .doc-preview-media { height: 45vh; min-height: 280px; }
-  .detail-table tr {
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem 0;
-  }
-  .detail-table__label { width: 100%; margin-bottom: 0.15rem; font-size: 0.75rem; }
-
-  /* Summary banner stacks on narrow */
-  .summary-banner { flex-direction: column; align-items: flex-start; }
-
-  /* Sentinel: text label hidden, dot still shows */
-  .sentinel-label { display: none; }
-  .sentinel-badge { padding: 0.35rem 0.5rem; }
-
-  /* Kanban columns: mobile-height scrollable */
-  .kanban-column { max-height: 70vh; }
-
-  /* Perf trigger compact */
-  .perf-current-title { font-size: 0.75rem; }
-  .perf-dropdown-menu { width: 220px; right: auto; left: 0; }
-}
-
-/* Very small phones — 400px and below */
-@media (max-width: 400px) {
-  .navbar-brand-info { display: none; }
-  .nav-btn { padding: 0.45rem 0.5rem 0.4rem; min-width: 44px; }
-  .nav-label { display: none; }   /* icon-only on tiny screens */
-  .tile-grid { gap: 0.75rem; }
-  .main-content { padding: 0.75rem 0.65rem calc(72px + env(safe-area-inset-bottom)); }
-}
-
-/* ============================================================
    LANGUAGE SWITCHER
 ============================================================ */
 .lang-grid {
@@ -1005,6 +812,207 @@ button, [role="button"], a, input, select, textarea, label,
 @media (max-width: 1024px) { .kanban-board { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .kanban-board { grid-template-columns: 1fr; } }
 
+  .app-wrapper {
+    /* Full status bar clearance at top, home indicator at bottom */
+    padding-top: 0;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE
+============================================================ */
+@media (max-width: 1024px) {
+  .main-content { max-width: 100%; padding: 1.5rem 1.1rem; }
+  .kanban-board { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ============================================================
+   TABLET — 641px to 1024px
+   Top nav stays. 2-col grid. Touch targets ≥ 44px.
+============================================================ */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .tile-grid { grid-template-columns: repeat(2, 1fr); }
+  .nav-btn { padding: .4rem .75rem; font-size: .82rem; }
+  .btn { min-height: 44px; }
+  .task-tile { padding: 1.1rem 1.2rem; }
+  .folder-btn { padding: 1.5rem 1rem; }
+}
+
+/* ============================================================
+   TABLET PORTRAIT — up to 768px
+   Detail layout stacks, perf dropdown moves left.
+============================================================ */
+@media (max-width: 768px) {
+  .detail-layout { flex-direction: column-reverse; }
+  .detail-preview { position: static; width: 100%; }
+  .doc-preview-media { height: 50vh; }
+  .perf-dropdown-menu { right: auto; left: 0; }
+}
+
+/* ============================================================
+   MOBILE PHONE — up to 640px
+   Bottom navigation bar. Compact top bar. iOS safe areas.
+============================================================ */
+@media (max-width: 640px) {
+
+  /* Compact top bar — brand + right controls only */
+  .navbar {
+    position: static;
+    padding: 0 1rem;
+    height: 54px;
+    min-height: 54px;
+    flex-wrap: nowrap;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* 
+   * Detach nav links from the top bar and fix them to the bottom.
+   * `position: fixed` removes them from the navbar's flex flow —
+   * the top bar naturally collapses to brand + controls only.
+   */
+  .navbar-links {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 250;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: stretch;
+    /* Solid background as universal fallback (works on all Android versions) */
+    background: rgba(255, 255, 255, 0.97);
+    border-top: 1px solid var(--border);
+    border-top-left-radius: 14px;
+    border-top-right-radius: 14px;
+    box-shadow: 0 -2px 24px rgba(10,25,60,.10);
+    /* iOS home indicator clearance */
+    padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+    /* Override tablet reordering */
+    order: unset;
+    width: auto;
+    margin-top: 0;
+    flex: none;
+  }
+  /* Frosted glass only where supported (Android 76+, iOS 15+, modern desktop) */
+  @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+    .navbar-links {
+      background: rgba(255, 255, 255, 0.88);
+      -webkit-backdrop-filter: blur(18px) saturate(180%);
+      backdrop-filter: blur(18px) saturate(180%);
+    }
+  }
+
+  /* Prevent iOS and Android from zooming into inputs on focus.
+     Any input with font-size < 16px triggers auto-zoom on both platforms. */
+  input, select, textarea { font-size: 16px; }
+
+  /* Nav buttons: vertical stack (icon on top, label below) */
+  .nav-btn {
+    flex-direction: column;
+    gap: 0.12rem;
+    padding: 0.5rem 0.85rem 0.4rem;
+    min-height: 54px;
+    flex: 1;
+    border-radius: var(--radius-sm);
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+  }
+  .nav-icon { font-size: 1.45rem; }
+
+  /* Re-show labels in the bottom tab bar */
+  .nav-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: .02em;
+  }
+
+  /* Hide perf dropdown in top bar on mobile — accessible from Settings */
+  .perf-dropdown-wrapper { display: none; }
+
+  /* Override inline min-width on the right-side navbar div */
+  .navbar > div:last-child {
+    min-width: auto !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Extra bottom padding: bottom nav height + safe area */
+  .main-content {
+    padding: 1rem 0.85rem calc(80px + env(safe-area-inset-bottom));
+  }
+
+  /* Top padding: clearance for status bar notches */
+  .app-wrapper {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Single-column layouts */
+  .tile-grid     { grid-template-columns: 1fr; }
+  .folder-grid   { grid-template-columns: repeat(2, 1fr); }
+  .kanban-board  { grid-template-columns: 1fr; }
+
+  /* Typography */
+  .navbar-brand-text { font-size: 0.92rem; }
+  .navbar-brand-icon { font-size: 1.1rem; }
+  .page-title        { font-size: 1.25rem; }
+
+  /* Touch targets — WCAG 2.5.5 recommends 44×44px minimum */
+  .btn      { min-height: 44px; }
+  .btn-sm   { min-height: 38px; }
+  .doc-row  { padding: 1rem 1.1rem; }
+
+  /* Task tiles: comfortable thumb tap zone */
+  .task-tile {
+    padding: 1.15rem 1.1rem;
+    border-radius: var(--radius);
+  }
+
+  /* Upload dropzone: more vertical presence on a phone screen */
+  .dropzone {
+    padding: 2.75rem 1.5rem;
+    border-radius: var(--radius);
+  }
+
+  /* Document detail */
+  .detail-layout { flex-direction: column-reverse; }
+  .detail-preview { position: static; width: 100%; }
+  .doc-preview-media { height: 45vh; min-height: 280px; }
+  .detail-table tr {
+    display: flex;
+    flex-direction: column;
+    padding: 0.5rem 0;
+  }
+  .detail-table__label { width: 100%; margin-bottom: 0.15rem; font-size: 0.75rem; }
+
+  /* Summary banner stacks on narrow */
+  .summary-banner { flex-direction: column; align-items: flex-start; }
+
+  /* Sentinel: text label hidden, dot still shows */
+  .sentinel-label { display: none; }
+  .sentinel-badge { padding: 0.35rem 0.5rem; }
+
+  /* Kanban columns: mobile-height scrollable */
+  .kanban-column { max-height: 70vh; }
+
+  /* Perf trigger compact */
+  .perf-current-title { font-size: 0.75rem; }
+  .perf-dropdown-menu { width: 220px; right: auto; left: 0; }
+}
+
+/* Very small phones — 400px and below */
+@media (max-width: 400px) {
+  .navbar-brand-info { display: none; }
+  .nav-btn { padding: 0.45rem 0.5rem 0.4rem; min-width: 44px; }
+  .nav-label { display: none; }   /* icon-only on tiny screens */
+  .tile-grid { gap: 0.75rem; }
+  .main-content { padding: 0.75rem 0.65rem calc(72px + env(safe-area-inset-bottom)); }
+}
+
+
+
 /* ============================================================
    PWA STANDALONE MODE
    When added to home screen (iOS Safari or Android Chrome),
@@ -1018,7 +1026,7 @@ button, [role="button"], a, input, select, textarea, label,
     height: calc(var(--navbar-h) + env(safe-area-inset-top));
   }
   .app-wrapper {
-    /* Full status bar clearance at top, home indicator at bottom */
     padding-top: 0;
   }
 }
+
