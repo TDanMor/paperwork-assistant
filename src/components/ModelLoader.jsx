@@ -8,7 +8,7 @@ export default function ModelLoader() {
   const { modelStatus, modelProgress, modelMessage } = state;
 
   useEffect(() => {
-    if (modelStatus === 'idle' && localStorage.getItem('ai_model_cached') === 'true') {
+    if (modelStatus === 'idle') {
       handleLoad();
     }
   }, [modelStatus]); 
