@@ -15,6 +15,7 @@ import VaultLock       from './components/VaultLock.jsx';
 import InstallBanner   from './components/InstallBanner.jsx';
 import { getAllDocuments, setSessionKey } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
+import { initializeHardware, activeHardwareProfile } from './ai/engine.js';
 
 // ---------- Context (shared with all child components) ----------
 export const AppContext = createContext(null);
@@ -24,7 +25,7 @@ const LOCK_AFTER_MS = 15 * 60 * 1000; // 15 Minutes
 // ---------- Initial state ----------
 const initialState = {
   language:      localStorage.getItem('pa_lang') || 'en',
-  modelStatus:   'idle',   // idle | loading | ready | error
+  modelStatus:   'checking_hardware',   // checking_hardware | idle | loading | ready | error | ready_deterministic
   modelProgress: 0,        // 0–100
   modelMessage:  '',       // status text from WebLLM
   view:          'dashboard', // dashboard | upload | folders | detail | settings
@@ -112,6 +113,17 @@ export default function App() {
     getAllDocuments()
       .then(docs => dispatch({ type: 'SET_DOCUMENTS', documents: docs }))
       .catch(err  => console.error('Failed to load documents:', err));
+  }, []);
+
+  // Initialize hardware capabilities
+  useEffect(() => {
+    initializeHardware().then(() => {
+      if (activeHardwareProfile && activeHardwareProfile.tier === 'NO_LOCAL') {
+        dispatch({ type: 'SET_MODEL_STATUS', status: 'ready_deterministic', message: '' });
+      } else {
+        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: '' });
+      }
+    });
   }, []);
 
   // Sync language helper whenever it changes

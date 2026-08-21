@@ -1,13 +1,12 @@
 import React, { useContext, useEffect } from 'react';
 import { AppContext } from '../App.jsx';
-import { loadModel } from '../ai/engine.js';
+import { loadModel, activeHardwareProfile } from '../ai/engine.js';
 import { t } from '../i18n/index.js';
 
 export default function ModelLoader() {
   const { state, dispatch } = useContext(AppContext);
   const { modelStatus, modelProgress, modelMessage } = state;
 
-  // Automatically start loading if we know it is already cached
   useEffect(() => {
     if (modelStatus === 'idle' && localStorage.getItem('ai_model_cached') === 'true') {
       handleLoad();
@@ -15,7 +14,6 @@ export default function ModelLoader() {
   }, [modelStatus]); 
 
   async function handleLoad() {
-    // If it was a fatal crash, wait a moment for the driver to recover
     if (modelStatus === 'error') {
       await new Promise(r => setTimeout(r, 2000));
     }
@@ -34,29 +32,40 @@ export default function ModelLoader() {
     }
   }
 
+  if (modelStatus === 'checking_hardware' || modelStatus === 'ready_deterministic') {
+    return null;
+  }
+
   if (modelStatus === 'idle') {
-    // Prevent the banner from flashing for a split second before auto-loading starts
     if (localStorage.getItem('ai_model_cached') === 'true') {
       return null;
     }
 
     return (
-      <div className="model-banner model-banner--idle">
-        <span className="model-banner__text">🤖 {t('model.idle_message')}</span>
-        <button className="btn btn-primary btn-sm" onClick={handleLoad}>
-          {t('model.load_button')}
-        </button>
+      <div className="model-banner model-banner--idle" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+        {activeHardwareProfile && (
+          <div style={{ marginBottom: '0.75rem', background: 'rgba(0,0,0,0.05)', padding: '0.75rem', borderRadius: '8px', width: '100%' }}>
+            <strong style={{ display: 'block', marginBottom: '0.2rem', color: 'var(--primary)' }}>
+              {activeHardwareProfile.tier === 'PRO' ? t('hardware.pro_title') : t('hardware.lite_title')}
+            </strong>
+            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>{activeHardwareProfile.reason}</span>
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', justifyContent: 'space-between' }}>
+          <span className="model-banner__text">🤖 {t('model.idle_message')}</span>
+          <button className="btn btn-primary btn-sm" onClick={handleLoad} style={{ whiteSpace: 'nowrap' }}>
+            {t('model.load_button')}
+          </button>
+        </div>
       </div>
     );
   }
 
   if (modelStatus === 'loading') {
-    // NEW: If the model is already cached, hide the giant banner so it loads silently in the background!
     if (localStorage.getItem('ai_model_cached') === 'true') {
       return null;
     }
 
-    // Only show the giant progress bar the VERY FIRST time they download the 2GB model
     return (
       <div className="model-banner model-banner--loading">
         <span>{t('model.progress_label')}: {modelProgress}%</span>
@@ -69,8 +78,6 @@ export default function ModelLoader() {
   }
 
   if (modelStatus === 'error') {
-    // 🛡️ Technical errors are suppressed from the main view.
-    // They are now reflected in the NavBar "Hardware Sentinel" status dot.
     return null;
   }
 

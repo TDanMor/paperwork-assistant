@@ -1,4 +1,5 @@
 import { CreateMLCEngine } from "@mlc-ai/web-llm";
+import { detectCapabilityOnce } from './hardware.js';
 
 /* ─── Active Model Definitions ─────────────────────────────────────
  * pro:  Phi-3.5-Mini — Advanced reasoning, strong structured JSON output.
@@ -19,14 +20,26 @@ export const LEGACY_MODELS = {
   lite: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
 };
 
-// Default to pro on desktop, but auto-default to lite on mobile to prevent VRAM crashes
-const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-export let activeModelId = localStorage.getItem('pa_model_pref') || (isMobile ? MODELS.lite : MODELS.pro);
+export let activeModelId = null;
+export let activeHardwareProfile = null;
 export let engine = null;
 let aiActivated = false;
 let isProcessing = false;
 let isResetting = false;
 let lastTaskResetDone = true;
+
+/**
+ * Run once on boot to detect capability and assign the correct model.
+ */
+export async function initializeHardware() {
+  activeHardwareProfile = await detectCapabilityOnce();
+  const manualPref = localStorage.getItem('pa_model_pref');
+  if (manualPref) {
+    activeModelId = manualPref;
+  } else {
+    activeModelId = activeHardwareProfile.model;
+  }
+}
 
 export function setActiveModel(mode) {
   const newId = MODELS[mode] || MODELS.pro;
@@ -40,6 +53,12 @@ export function setActiveModel(mode) {
 export async function loadModel(progressCallback) {
   if (isResetting || engine) return;
   
+  if (activeHardwareProfile && activeHardwareProfile.tier === 'NO_LOCAL') {
+    // Bypass engine creation entirely
+    aiActivated = false;
+    return;
+  }
+
   try {
     engine = await CreateMLCEngine(
       activeModelId,
@@ -106,6 +125,11 @@ export async function getTokenCount(text) {
 }
 
 export async function chat(systemPrompt, userMessage) {
+  if (activeHardwareProfile && activeHardwareProfile.tier === 'NO_LOCAL') {
+    // Return empty string to force deterministic fallback in prompts.js
+    return "";
+  }
+  
   if (!engine) throw new Error("Model not loaded");
   if (isProcessing) throw new Error("AI is already busy with another document.");
 

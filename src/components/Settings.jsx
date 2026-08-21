@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { AppContext }      from '../App.jsx';
-import { loadModel, MODELS, activeModelId, setActiveModel } from '../ai/engine.js';
+import { loadModel, MODELS, activeModelId, setActiveModel, activeHardwareProfile } from '../ai/engine.js';
+import { resetHardwareProfile } from '../ai/hardware.js';
 import { getAllDocuments, clearAllDocuments, saveDocument }   from '../storage/db.js';
 import { t } from '../i18n/index.js';
 import LangSwitcher from './LangSwitcher.jsx';
@@ -130,6 +131,33 @@ export default function Settings() {
   return (
     <div className="page-container" style={{ maxWidth: '850px', margin: '0 auto' }}>
       <h1 className="page-title">{t('settings.title')}</h1>
+
+      {/* Hardware Profile */}
+      <section className="settings-card">
+        <h2>{t('hardware.profile_label')}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem', background: 'var(--bg)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
+          {activeHardwareProfile ? (
+            <>
+              <h3 style={{ fontSize: '0.95rem', color: 'var(--primary)' }}>
+                {activeHardwareProfile.tier === 'PRO' ? t('hardware.pro_title') : 
+                 activeHardwareProfile.tier === 'LITE' ? t('hardware.lite_title') : 
+                 t('hardware.no_local_title')}
+              </h3>
+              <p style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '0.2rem' }}>{activeHardwareProfile.reason}</p>
+              <div style={{ marginTop: '0.5rem' }}>
+                <button className="btn btn-outline btn-sm" onClick={() => {
+                  resetHardwareProfile();
+                  window.location.reload();
+                }}>
+                  {t('hardware.recheck_btn')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="muted" style={{ fontSize: '0.85rem' }}>Loading hardware profile...</p>
+          )}
+        </div>
+      </section>
 
       {/* Backup */}
       <section className="settings-card" style={{ borderLeft: '4px solid var(--accent)' }}>
