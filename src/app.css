@@ -1044,8 +1044,7 @@ button, [role="button"], a, input, select, textarea, label,
   }
 }
 
-. i n s t a l l - b a n n e r   {   p o s i t i o n :   f i x e d ;   b o t t o m :   e n v ( s a f e - a r e a - i n s e t - b o t t o m ,   0 ) ;   l e f t :   0 ;   r i g h t :   0 ;   p a d d i n g :   0 . 7 5 r e m   1 r e m ;   b a c k g r o u n d :   v a r ( - - s u r f a c e ) ;   b o r d e r - t o p :   1 p x   s o l i d   v a r ( - - b o r d e r ) ;   b o x - s h a d o w :   0   - 4 p x   1 2 p x   r g b a ( 0 , 0 , 0 , 0 . 0 8 ) ;   d i s p l a y :   f l e x ;   a l i g n - i t e m s :   c e n t e r ;   j u s t i f y - c o n t e n t :   s p a c e - b e t w e e n ;   z - i n d e x :   1 0 0 0 ;   }   . i n s t a l l - b a n n e r - c o n t e n t   {   d i s p l a y :   f l e x ;   a l i g n - i t e m s :   c e n t e r ;   g a p :   0 . 7 5 r e m ;   }   @ m e d i a   ( m a x - w i d t h :   6 4 0 p x )   {   . i n s t a l l - b a n n e r   {   b o t t o m :   c a l c ( 6 4 p x   +   e n v ( s a f e - a r e a - i n s e t - b o t t o m ,   0 ) ) ;   }   }  
- 
+
 .install-banner {
   position: fixed;
   bottom: 1.5rem;
