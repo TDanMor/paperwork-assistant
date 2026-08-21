@@ -358,45 +358,19 @@ button, [role="button"], a, input, select, textarea, label,
 /* ============================================================
    TASK TILE
 ============================================================ */
-.task-tile {
-  background: var(--surface);
-  border-radius: var(--radius-sm);
-  padding: 1.1rem 1.25rem;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border);
-  transition: transform .14s, box-shadow .14s, border-color .14s;
-}
-.task-tile:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--border-hover);
-}
-.tile__header {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  margin-bottom: .45rem;
-}
-.tile__icon   { font-size: 1.05rem; }
-.tile__sender { font-weight: 700; flex: 1; font-size: .875rem; letter-spacing: -.01em; }
-.tile__cat    { font-size: .72rem; font-weight: 600; }
-.tile__summary {
-  font-size: .825rem;
-  color: var(--muted);
-  line-height: 1.5;
-  margin-bottom: .5rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.tile__meta {
-  display: flex;
-  gap: .75rem;
-  font-size: .75rem;
-  color: var(--muted);
-}
+.tile{background:#fff;border-radius:6px;padding:1rem 1.15rem;box-shadow:0 1px 3px rgba(10,25,60,.06),0 1px 2px rgba(10,25,60,.04);border:1px solid var(--border);transition:all .14s;cursor:pointer;}
+.tile:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(10,25,60,.09);border-color:var(--accent);}
+.tile-hd{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.tile-ico{font-size:1.05rem}
+.tile-sender{font-weight:700;flex:1;font-size:.85rem;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tile-badge{display:inline-flex;align-items:center;padding:.12rem .45rem;border-radius:99px;font-size:.66rem;font-weight:700;letter-spacing:.04em}
+.b-ov{background:#FEF2F2;color:#DC2626}
+.b-ur{background:#FFF4ED;color:#C2590A}
+.b-up{background:#EDF3FF;color:#1D57C8}
+.b-in{background:#F0FDF4;color:#15803D}
+.tile-sum{font-size:.8rem;color:var(--muted);line-height:1.5;margin-bottom:.45rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile-meta{display:flex;gap:.7rem;font-size:.72rem;color:var(--muted)}
+.tile-meta span{display:flex;align-items:center;gap:.3rem}
 
 /* ============================================================
    URGENCY BADGES
