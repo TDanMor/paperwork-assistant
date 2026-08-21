@@ -100,7 +100,9 @@
     "done_note_prompt": "Adăugați o notă opțională (ex: \"Plătit prin transfer bancar\"):",
     "done_note_label": "Notă: ",
     "calendar_add": "Adaugă în Google Calendar",
-    "unknown_sender": "Necunoscut"
+    "unknown_sender": "Necunoscut",
+    "expires": "Expiră",
+    "credit": "Credit"
   },
   "vault": {
     "title": "Seif Personal Blocat",
@@ -172,7 +174,7 @@
     "pay": "Plătește",
     "renew": "Reînnoiește",
     "attend": "Participă",
-    "respond": "Răspunde",
+    "respond": "Semnează și returnează",
     "file": "Clasează",
     "none": "Nicio acțiune"
   },

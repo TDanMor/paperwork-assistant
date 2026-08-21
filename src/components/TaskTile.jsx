@@ -37,8 +37,20 @@ export default function TaskTile({ doc }) {
       <div className="tile-sum">{doc.summary || doc.file_name}</div>
 
       <div className="tile-meta">
-        {doc.dates?.due_date && <span>📅 {t('detail.due_date')}: {doc.dates.due_date}</span>}
-        {doc.money?.amount != null && <span>💶 {doc.money.amount} {doc.money.currency || 'EUR'}</span>}
+        {doc.dates?.due_date && (
+          <span>
+            📅 {doc.action_required === 'pay' ? `${t('detail.due_date')} ` : doc.action_required === 'renew' ? `${t('detail.expires')} ` : ''}
+            {doc.dates.due_date}
+          </span>
+        )}
+        {doc.money?.amount != null && (
+          <span>
+            {doc.action_required === 'none' ? `💳 ${t('detail.credit')} ` : '💶 '} 
+            {doc.money.amount} {doc.money.currency || 'EUR'}
+          </span>
+        )}
+        {doc.action_required === 'file' && <span>📁 {t('actions.file')}</span>}
+        {doc.action_required === 'respond' && <span>✍️ {t('actions.respond')}</span>}
       </div>
     </div>
   );

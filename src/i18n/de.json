@@ -82,7 +82,7 @@
     "sender": "Absender",
     "type": "Dokumenttyp",
     "date": "Datum",
-    "due_date": "Fälligkeitsdatum",
+    "due_date": "Fällig",
     "amount": "Betrag",
     "category": "Kategorie",
     "action": "Aktion erforderlich",
@@ -100,7 +100,9 @@
     "done_note_prompt": "Optionale Notiz hinzufügen (z. B. 'Per Banküberweisung bezahlt'):",
     "done_note_label": "Notiz: ",
     "calendar_add": "Zum Google Kalender hinzufügen",
-    "unknown_sender": "Unbekannt"
+    "unknown_sender": "Unbekannt",
+    "expires": "Läuft ab",
+    "credit": "Guthaben"
   },
   "vault": {
     "title": "Persönlicher Tresor gesperrt",
@@ -189,7 +191,7 @@
     "pay": "Bezahlen",
     "renew": "Verlängern",
     "attend": "Teilnehmen",
-    "respond": "Antworten",
+    "respond": "Unterschreiben & Zurücksenden",
     "file": "Abheften",
     "none": "Keine Aktion nötig"
   },

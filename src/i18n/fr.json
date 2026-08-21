@@ -100,7 +100,9 @@
     "done_note_prompt": "Note optionnelle (ex: 'Payé par virement') :",
     "done_note_label": "Note : ",
     "calendar_add": "Ajouter au calendrier",
-    "unknown_sender": "Inconnu"
+    "unknown_sender": "Inconnu",
+    "expires": "Expire",
+    "credit": "Crédit"
   },
   "vault": {
     "title": "Coffre-fort verrouillé",
@@ -188,7 +190,7 @@
     "pay": "Payer",
     "renew": "Renouveler",
     "attend": "Assister",
-    "respond": "Répondre",
+    "respond": "Signer et retourner",
     "file": "Classer",
     "none": "Aucune"
   },

@@ -100,7 +100,9 @@
     "done_note_prompt": "Añada una nota opcional (ej. \"Pagado vía transferencia bancaria\"):",
     "done_note_label": "Nota: ",
     "calendar_add": "Añadir a Google Calendar",
-    "unknown_sender": "Desconocido"
+    "unknown_sender": "Desconocido",
+    "expires": "Expira",
+    "credit": "Crédito"
   },
   "vault": {
     "title": "Bóveda Personal Bloqueada",
@@ -189,7 +191,7 @@
     "pay": "Pagar",
     "renew": "Renovar",
     "attend": "Asistir",
-    "respond": "Responder",
+    "respond": "Firmar y devolver",
     "file": "Archivar",
     "none": "Ninguna acción"
   },

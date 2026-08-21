@@ -82,7 +82,7 @@
     "sender": "Sender",
     "type": "Document Type",
     "date": "Document Date",
-    "due_date": "Due Date",
+    "due_date": "Due",
     "amount": "Amount",
     "category": "Category",
     "action": "Action Required",
@@ -100,7 +100,9 @@
     "done_note_prompt": "Add an optional note (e.g. \"Paid via bank transfer\"):",
     "done_note_label": "Note: ",
     "calendar_add": "Add to Google Calendar",
-    "unknown_sender": "Unknown"
+    "unknown_sender": "Unknown",
+    "expires": "Expires",
+    "credit": "Credit"
   },
   "vault": {
     "title": "Personal Vault Locked",
@@ -189,7 +191,7 @@
     "pay": "Pay",
     "renew": "Renew",
     "attend": "Attend",
-    "respond": "Respond",
+    "respond": "Sign & Return",
     "file": "File away",
     "none": "No action needed"
   },
