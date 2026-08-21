@@ -4,6 +4,12 @@ This document defines the high-level architecture of the document classification
 
 ---
 
+## 0. Hardware Profiling & VRAM Protection (`hardware.js`)
+Before the engine even initializes, the app performs a one-time deterministic capability check (`detectCapabilityOnce()`). WebLLM inference is incredibly fragile on mobile and low-RAM desktop systems. The app evaluates:
+- **PRO Tier**: Desktop GPUs with >1GB buffers and >8GB system RAM (`Phi-3.5-mini-instruct-q4f16_1-MLC`).
+- **LITE Tier**: Mobile devices or low-spec WebGPU adapters (`Qwen2.5-1.5B-Instruct-q4f16_1-MLC`).
+- **NO_LOCAL (Standard Mode)**: Missing WebGPU or <4GB RAM. Local processing is completely bypassed to prevent OOM browser crashes. The app falls back *perfectly* to Phase 1/2 deterministic extraction.
+
 ## 🏛️ Core Philosophy: "Deterministic First, AI Second"
 Most AI applications "ask" an LLM to find numbers and dates. This app **"tells"** the AI what data it found. We use JavaScript for **Reliability & Legal Proofs** (The Skeleton) and the LLM for **Narrative Intelligence** (The Flesh).
 
