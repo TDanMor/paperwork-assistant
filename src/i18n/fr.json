@@ -260,17 +260,17 @@
     "continue_btn": "Get Started"
   },
   "onboarding": {
-    "welcome_title": "Welcome to Paperwork Assistant",
-    "welcome_subtitle": "Your 100% private, on-device document assistant.",
-    "feat_local_title": "100% Local & Private",
-    "feat_local_desc": "No data ever leaves your device. Everything runs directly in your browser.",
-    "feat_data_title": "Complete Data Control",
-    "feat_data_desc": "Easily clear your workspace anytime, or create and restore password-encrypted backups.",
-    "feat_sync_title": "Smart Calendar Sync",
-    "feat_sync_desc": "Automatically extract deadlines and sync them with Google Calendar.",
-    "scan_notice": "To ensure smooth performance and avoid crashes, we will now quickly scan your device to assign the best compatible version (Pro or Lite).",
-    "btn_scan": "Start Hardware Scan",
-    "select_language": "Select Language",
-    "scan_requirements": "Requirements: 4GB+ RAM (Lite) / 8GB+ RAM & Dedicated GPU (Pro)"
+    "welcome_title": "Bienvenue sur Paperwork Assistant",
+    "welcome_subtitle": "Votre assistant documentaire 100% privé et local.",
+    "feat_local_title": "100% Local et Privé",
+    "feat_local_desc": "Aucune donnée ne quitte jamais votre appareil. Tout s'exécute directement dans votre navigateur.",
+    "feat_data_title": "Contrôle Total des Données",
+    "feat_data_desc": "Effacez facilement votre espace de travail à tout moment, ou créez et restaurez des sauvegardes chiffrées par mot de passe.",
+    "feat_sync_title": "Synchronisation Intelligente du Calendrier",
+    "feat_sync_desc": "Extrayez automatiquement les échéances et synchronisez-les avec Google Calendar.",
+    "scan_notice": "Pour garantir des performances fluides et éviter les plantages, nous allons maintenant analyser rapidement votre appareil pour assigner la meilleure version compatible (Pro ou Lite).",
+    "btn_scan": "Démarrer l'analyse matérielle",
+    "select_language": "Choisir la langue",
+    "scan_requirements": "Configuration requise : 4Go+ RAM (Lite) / 8Go+ RAM & GPU Dédié (Pro)"
   }
 }

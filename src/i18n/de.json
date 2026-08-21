@@ -262,17 +262,17 @@
     "continue_btn": "Get Started"
   },
   "onboarding": {
-    "welcome_title": "Welcome to Paperwork Assistant",
-    "welcome_subtitle": "Your 100% private, on-device document assistant.",
-    "feat_local_title": "100% Local & Private",
-    "feat_local_desc": "No data ever leaves your device. Everything runs directly in your browser.",
-    "feat_data_title": "Complete Data Control",
-    "feat_data_desc": "Easily clear your workspace anytime, or create and restore password-encrypted backups.",
-    "feat_sync_title": "Smart Calendar Sync",
-    "feat_sync_desc": "Automatically extract deadlines and sync them with Google Calendar.",
-    "scan_notice": "To ensure smooth performance and avoid crashes, we will now quickly scan your device to assign the best compatible version (Pro or Lite).",
-    "btn_scan": "Start Hardware Scan",
-    "select_language": "Select Language",
-    "scan_requirements": "Requirements: 4GB+ RAM (Lite) / 8GB+ RAM & Dedicated GPU (Pro)"
+    "welcome_title": "Willkommen beim Paperwork Assistant",
+    "welcome_subtitle": "Ihr 100% privater, lokaler Dokumenten-Assistent.",
+    "feat_local_title": "100% Lokal & Privat",
+    "feat_local_desc": "Keine Daten verlassen jemals Ihr Gerät. Alles läuft direkt in Ihrem Browser.",
+    "feat_data_title": "Volle Datenkontrolle",
+    "feat_data_desc": "Leeren Sie Ihren Arbeitsbereich jederzeit oder erstellen und stellen Sie passwortverschlüsselte Backups wieder her.",
+    "feat_sync_title": "Intelligente Kalender-Synchronisierung",
+    "feat_sync_desc": "Extrahieren Sie automatisch Fristen und synchronisieren Sie diese mit Google Calendar.",
+    "scan_notice": "Um eine reibungslose Leistung zu gewährleisten und Abstürze zu vermeiden, überprüfen wir nun kurz Ihr Gerät, um die beste kompatible Version (Pro oder Lite) zuzuweisen.",
+    "btn_scan": "Hardware-Scan starten",
+    "select_language": "Sprache auswählen",
+    "scan_requirements": "Anforderungen: 4GB+ RAM (Lite) / 8GB+ RAM & Dedizierte GPU (Pro)"
   }
 }

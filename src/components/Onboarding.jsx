@@ -37,23 +37,29 @@ export default function Onboarding({ onFinish }) {
       overflowY: 'auto'
     }}>
       <div style={{
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '120vmin', height: '120vmin',
-        backgroundImage: 'url("/logo-round.png")',
-        backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
-        opacity: 0.05, zIndex: -1, pointerEvents: 'none'
-      }}></div>
-      
-      <div style={{
         maxWidth: '550px', width: '100%',
         background: 'var(--surface)',
+        position: 'relative',
         padding: '2.5rem',
         borderRadius: '16px',
         boxShadow: 'var(--shadow-xl)',
         border: '1px solid var(--border)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center'
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        overflow: 'hidden'
       }}>
+        
+        {/* Watermark inside the modal */}
+        <div style={{
+          position: 'absolute', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%', height: '90%',
+          backgroundImage: 'url("/logo-round.png")',
+          backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+          opacity: 0.04, zIndex: 0, pointerEvents: 'none'
+        }}></div>
+
+        {/* Content wrapper to sit above watermark */}
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         
         {phase === 'welcome' && (
           <>
@@ -132,7 +138,7 @@ export default function Onboarding({ onFinish }) {
         )}
         
         {phase === 'result' && (
-          <div style={{ padding: '1rem 0' }}>
+          <div style={{ padding: '1rem 0', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
               {activeHardwareProfile?.tier === 'NO_LOCAL' ? '⚡' : '✅'}
             </div>
@@ -156,6 +162,7 @@ export default function Onboarding({ onFinish }) {
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
