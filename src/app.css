@@ -702,7 +702,6 @@ button, [role="button"], a, input, select, textarea, label,
   display: none;
   width: 260px;
 }
-.perf-dropdown-wrapper:hover .perf-dropdown-menu { display: block; }
 .perf-option {
   display: flex;
   flex-direction: column;

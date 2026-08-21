@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useRef, useEffect } from 'react';
 import { AppContext } from '../App.jsx';
 import { t } from '../i18n/index.js';
 import LangSwitcher from './LangSwitcher.jsx';
@@ -9,23 +9,36 @@ const NAV_ITEMS = [
   { view: 'dashboard', icon: '📊', labelKey: 'nav.dashboard' },
   { view: 'upload',    icon: '📤', labelKey: 'nav.upload'    },
   { view: 'folders',   icon: '📁', labelKey: 'nav.folders'   },
-  { view: 'timeline',  icon: '⏱️', labelKey: 'nav.timeline'  },
-  { view: 'settings',  icon: '⚙️',  labelKey: 'nav.settings'  },
+  { view: 'timeline',  icon: '⏱️', labelKey: 'nav.timeline_view' },
+  { view: 'settings',  icon: '⚙️', labelKey: 'nav.settings'  },
 ];
 
 export default function NavBar() {
   const { state, dispatch } = useContext(AppContext);
   const isLite = activeModelId === MODELS.lite;
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   const handleModeChange = (e) => {
     const mode = e.target.value;
     if (window.confirm(t('settings.mode_confirm'))) {
       setActiveModel(mode);
       dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('settings.switched_msg') });
+      setShowDropdown(false);
       // Force a tiny delay so the reducer catches up before any automatic re-load triggers
       setTimeout(() => window.location.reload(), 100);
     }
   };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <nav className="navbar">
@@ -50,17 +63,17 @@ export default function NavBar() {
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-        <div className="perf-toggle-container">
+        <div className="perf-toggle-container" ref={dropdownRef}>
           <div className="perf-dropdown-wrapper">
-            <div className="perf-trigger">
+            <div className="perf-trigger" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer' }}>
               <span className="perf-current-title">
                 {activeModelId === MODELS.lite ? '⚡' : '🏆'} {activeModelId === MODELS.lite ? t('settings.lite_title') : t('settings.pro_title')}
               </span>
             </div>
-            <div className="perf-dropdown-menu">
+            <div className="perf-dropdown-menu" style={{ display: showDropdown ? 'block' : '' }}>
               <button
                 className={`perf-option ${activeModelId !== MODELS.lite ? 'perf-option--active' : ''}`}
-                onClick={() => activeModelId === MODELS.lite && handleModeChange({ target: { value: 'pro' } })}
+                onClick={() => activeModelId === MODELS.lite ? handleModeChange({ target: { value: 'pro' } }) : setShowDropdown(false)}
               >
                 <span className="perf-title">🏆 {t('settings.pro_title')}</span>
                 <span className="perf-desc">{t('settings.pro_desc')}</span>
@@ -68,7 +81,7 @@ export default function NavBar() {
               </button>
               <button
                 className={`perf-option ${activeModelId === MODELS.lite ? 'perf-option--active' : ''}`}
-                onClick={() => activeModelId !== MODELS.lite && handleModeChange({ target: { value: 'lite' } })}
+                onClick={() => activeModelId !== MODELS.lite ? handleModeChange({ target: { value: 'lite' } }) : setShowDropdown(false)}
               >
                 <span className="perf-title">⚡ {t('settings.lite_title')}</span>
                 <span className="perf-desc">{t('settings.lite_desc')}</span>
