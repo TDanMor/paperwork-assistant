@@ -26,11 +26,32 @@ export function buildSystemPrompt(language, attentionModel) {
     ? `\nKey sentences from the document:\n${facts.context_sentences.map(s => `- "${s}"`).join('\n')}`
     : '';
 
+  // V5.0: Inject RV-Nummer and BG-Nummer if found (deterministic, never AI-guessed)
+  const refs = facts.reference_numbers || {};
+  const idLines = [];
+  if (refs.rv_nummer)      idLines.push(`- RV-Nummer (Pension ID): ${refs.rv_nummer}`);
+  if (refs.bg_nummer)      idLines.push(`- BG-Nummer (Jobcenter Case): ${refs.bg_nummer}`);
+  if (refs.steuernummer)   idLines.push(`- Steuernummer: ${refs.steuernummer}`);
+  if (refs.aktenzeichen)   idLines.push(`- Aktenzeichen: ${refs.aktenzeichen}`);
+  if (refs.kassenzeichen)  idLines.push(`- Kassenzeichen: ${refs.kassenzeichen}`);
+  const idBlock = idLines.length > 0 ? '\n' + idLines.join('\n') : '';
+
+  // V5.0: Critical Action tone override — forces serious, urgent AI tone
+  let criticalBlock = '';
+  if (facts.risk_flags?.critical_action && facts.risk_flags?.critical_keywords?.length > 0) {
+    const threats = facts.risk_flags.critical_keywords.join(', ');
+    criticalBlock = `\n\nCRITICAL ALERT — THIS DOCUMENT CONTAINS: ${threats.toUpperCase()}
+- Use a very serious, urgent tone. This is NOT a routine letter.
+- Emphasize that IMMEDIATE action is required — the user's finances or benefits are at direct risk.
+- Clearly state what the threat is (e.g. account seizure, benefit suspension, sanctions) in plain language.
+- Recommend the user seek professional help (Schuldnerberatung, lawyer, Jobcenter) if applicable.`;
+  }
+
   return `You explain German letters to regular people. Write in ${langName}.
 
 VERIFIED FACTS (use these, do not guess):
 - From: ${facts.sender}
-- About: ${topic}${amount ? `\n- Amount: ${amount}` : ''}${contextBlock}
+- About: ${topic}${amount ? `\n- Amount: ${amount}` : ''}${idBlock}${contextBlock}
 
 INSTRUCTIONS:
 Write a JSON object with these keys:
@@ -40,7 +61,7 @@ Write a JSON object with these keys:
 
 RULES:
 - Be specific: use exact amounts, dates, and names from the text.
-- Never say "check the document" — YOU are the one reading it for the user.${facts.is_direct_debit ? '\n- MANDATORY: This bill uses Direct Debit (Lastschrift). Tell the user clearly that the amount will be deducted automatically from their account and they do NOT need to do anything. Stop telling them to send bank details.' : ''}${facts.polarity_overall === 'nachzahlung' ? '\n- MANDATORY: The user OWES this money. Never say they will "receive money".' : ''}
+- Never say "check the document" — YOU are the one reading it for the user.${facts.is_direct_debit ? '\n- MANDATORY: This bill uses Direct Debit (Lastschrift). Tell the user clearly that the amount will be deducted automatically from their account and they do NOT need to do anything. Stop telling them to send bank details.' : ''}${facts.polarity_overall === 'nachzahlung' ? '\n- MANDATORY: The user OWES this money. Never say they will "receive money".' : ''}${criticalBlock}
 - Respond ONLY with the JSON object. Do NOT add any tags, headers, or explanations outside of the JSON. No XML, no markdown, no code blocks. Just the raw JSON object starting with { and ending with }.`;
 }
 

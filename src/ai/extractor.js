@@ -1,12 +1,20 @@
 /**
- * Paperwork Assistant - Master Level German Bureaucratic Extractor V4.0
+ * Paperwork Assistant - Practitioner Grade German Bureaucratic Extractor V5.0
  *
- * "Expert German Layer" Pass:
- * - Implemented Reference Number (Aktenzeichen/Kassenzeichen) extraction.
+ * V4.0 "Expert German Layer":
+ * - Reference Number (Aktenzeichen/Kassenzeichen) extraction.
  * - VAT Math (USt/MwSt) verification for 'Confirmed Invoice' status.
  * - German Address Standard (Street + Number) for improved scoring.
- * - Legal Remedy (Widerspruch) deadline calculation (+3 days + 1 month).
+ * - Legal Remedy (Widerspruch) deadline calculation.
  * - Expanded Dictionary (Vollstreckungsankündigung, Mitwirkungspflicht).
+ *
+ * V5.0 "Practitioner Grade" (Perplexity Audit):
+ * - Steuernummer: All Bundesländer formats (2/3/5, 3/4/4) + 13-digit Bundesschema.
+ * - RV-Nummer: Deutsche Rentenversicherung (12-char pattern).
+ * - BG-Nummer: Jobcenter Bedarfsgemeinschaft reference.
+ * - Widerspruch: 2025 rule (4-day fiction) + § 193 BGB weekend shift.
+ * - Historical VAT: 16%, 5% (COVID-era) and 0% (medical exemption).
+ * - Critical Action Dictionary: Pfändung, Sanktion, Kontopfändung, Leistungseinstellung.
  */
 
 // --- 1. FUZZY & UTILS ---
@@ -29,7 +37,9 @@ const KEYWORDS = {
   DEBT: ['nachzahlung', 'forderung', 'schuld', 'zahllast', 'mahnung', 'rechnungsbetrag', 'gesamtbetrag', 'betrag'],
   CREDIT: ['guthaben', 'erstattung', 'zuschuss', 'gutschrift', 'überweisen', 'auszahlung'],
   APPT: ['termin', 'einladung', 'vorsprache', 'beratung', 'uhrzeit', 'besprechung'],
-  ACTION: ['mitwirkungspflicht', 'vollstreckungsankündigung', 'widerspruch', 'bescheinigung']
+  ACTION: ['mitwirkungspflicht', 'vollstreckungsankündigung', 'widerspruch', 'bescheinigung'],
+  // V5.0: High-severity keywords that trigger 'critical_action' flag and urgent AI tone
+  CRITICAL: ['pfändungs- und überweisungsbeschluss', 'leistungseinstellung', 'sanktion', 'kontopfändung']
 };
 
 function hasFuzzyKeyword(text, keywordList) {
@@ -55,13 +65,19 @@ export function parseEuro(raw) {
 }
 
 /**
- * Validates German VAT math (19% or 7%).
- * If Net * 1.19 ≈ Gross, it's a confirmed invoice.
+ * Validates German VAT math across all known rates.
+ * Standard: 19% / 7% (current). Historical: 16% / 5% (COVID-era 2020 H2).
+ * Special: 0% (medical/educational exemption, § 4 UStG).
+ * If Net * (1 + rate) ≈ Gross, it's a confirmed invoice.
  */
 function harvestTableMath(ocrText) {
     const amountRegex = /(\d{1,3}(?:\.\d{3})*(?:,\d{2}))/g;
     const matches = ocrText.match(amountRegex) || [];
     const values = matches.map(parseEuro);
+
+    // All known German VAT rates (decimal form)
+    const vatRates = [0.19, 0.07, 0.16, 0.05];
+    const rateLabels = { 0.19: 19, 0.07: 7, 0.16: 16, 0.05: 5 };
 
     for (let i = 0; i < values.length; i++) {
         for (let j = i + 1; j < Math.min(i + 5, values.length); j++) {
@@ -70,11 +86,28 @@ function harvestTableMath(ocrText) {
                 // Check v1 + v2 = v3 (Net + Tax = Gross)
                 if (Math.abs((v1 + v2) - v3) < 0.05 && v1 > 0) {
                     const ratio = v2 / v1;
-                    const isVat19 = Math.abs(ratio - 0.19) < 0.01;
-                    const isVat7 = Math.abs(ratio - 0.07) < 0.01;
-                    if (isVat19 || isVat7) {
-                      return { net: v1, tax: v2, gross: v3, confirmed: true, rate: isVat19 ? 19 : 7 };
+                    for (const rate of vatRates) {
+                        if (Math.abs(ratio - rate) < 0.01) {
+                            return { net: v1, tax: v2, gross: v3, confirmed: true, rate: rateLabels[rate] };
+                        }
                     }
+                }
+            }
+        }
+
+        // V5.0: 0% rate (medical/educational exemption, § 4 UStG)
+        // Pattern: Tax amount is 0,00 EUR and Net = Gross
+        for (let j = i + 1; j < Math.min(i + 5, values.length); j++) {
+            const v1 = values[i], v2 = values[j];
+            // If two identical amounts appear near a "0,00" tax marker, it's a 0% invoice
+            if (Math.abs(v1 - v2) < 0.01 && v1 > 0) {
+                // Look for an explicit "0,00" between them in the text
+                const segment = ocrText.slice(
+                    ocrText.indexOf(matches[i]) + matches[i].length,
+                    ocrText.indexOf(matches[j])
+                );
+                if (/0[,.]00/.test(segment)) {
+                    return { net: v1, tax: 0, gross: v2, confirmed: true, rate: 0 };
                 }
             }
         }
@@ -125,21 +158,69 @@ function harvestAddresses(ocrText, lines) {
 
 /**
  * Extracts German Reference Numbers (Aktenzeichen, Kassenzeichen, etc.)
+ *
+ * V5.0 Additions:
+ * - Steuernummer: 2/3/5 format (e.g. 12/345/67890), 3/4/4 format (e.g. 123/4567/8901),
+ *   and 13-digit Bundesschema (e.g. 1234567890123).
+ * - RV-Nummer: Deutsche Rentenversicherung, 12-char format (2 digits, 6 digits, 1 letter, 3 digits).
+ * - BG-Nummer: Jobcenter Bedarfsgemeinschaft reference number.
  */
 function harvestReferenceNumbers(ocrText) {
   const refs = {
     kassenzeichen: null,
     aktenzeichen: null,
-    finanzamt: null,
+    steuernummer: null,   // V5.0: renamed from 'finanzamt' for clarity
     kundennummer: null,
-    versicherungsnummer: null
+    versicherungsnummer: null,
+    rv_nummer: null,      // V5.0: Rentenversicherungsnummer
+    bg_nummer: null       // V5.0: Bedarfsgemeinschaftsnummer (Jobcenter)
   };
 
-  // Finanzamt: 12/345/67890
-  const faMatch = ocrText.match(/\b\d{2}\/\d{3}\/\d{5}\b/);
-  if (faMatch) refs.finanzamt = faMatch[0];
+  // --- Steuernummer (Finanzamt) ---
+  // Format 1: Classic 2/3/5 (e.g. 12/345/67890) — most Bundesländer
+  const fa235 = ocrText.match(/\b\d{2}\/\d{3}\/\d{5}\b/);
+  if (fa235) refs.steuernummer = fa235[0];
 
-  // Generic patterns with anchor words
+  // Format 2: 3/4/4 (e.g. 123/4567/8901) — e.g. Bayern, Baden-Württemberg
+  if (!refs.steuernummer) {
+    const fa344 = ocrText.match(/\b\d{3}\/\d{4}\/\d{4}\b/);
+    if (fa344) refs.steuernummer = fa344[0];
+  }
+
+  // Format 3: 13-digit Bundesschema (e.g. 5133081508159) — unified electronic format
+  if (!refs.steuernummer) {
+    const fa13 = ocrText.match(/(?:steuernummer|st[.-]?nr|steuer-id)[:\s]+(\d{13})\b/i);
+    if (fa13) refs.steuernummer = fa13[1];
+  }
+
+  // --- RV-Nummer (Deutsche Rentenversicherung) ---
+  // Format: 12 characters — 2 digits (area), 6 digits (date-based), 1 letter, 3 digits
+  // Example: 12 170378 A 123 → "12170378A123"
+  const rvAnchors = [
+    /(?:rentenversicherungsnummer|rv[- ]?nummer|sozialversicherungsnummer|sozialversicherungs-?nr|rvnr)[:\s]+(\d{2}\s?\d{6}\s?[A-Za-z]\s?\d{3})/i
+  ];
+  for (const pattern of rvAnchors) {
+    const match = ocrText.match(pattern);
+    if (match && match[1]) {
+      // Normalize: strip spaces to get the canonical 12-char form
+      refs.rv_nummer = match[1].replace(/\s+/g, '').toUpperCase();
+      break;
+    }
+  }
+
+  // --- BG-Nummer (Jobcenter Bedarfsgemeinschaft) ---
+  const bgAnchors = [
+    /(?:bg[- ]?nummer|bg[- ]?nr|bedarfsgemeinschaft(?:s-?nummer)?|bg nummer)[:\s]+([\w/\-]+)/i
+  ];
+  for (const pattern of bgAnchors) {
+    const match = ocrText.match(pattern);
+    if (match && match[1]) {
+      refs.bg_nummer = match[1].trim();
+      break;
+    }
+  }
+
+  // --- Generic anchored patterns (unchanged from V4.0) ---
   const anchors = [
     { key: 'kassenzeichen', patterns: [/(?:kassenzeichen|kassen-?nr)[:\s]+([\w/\-]+)/i] },
     { key: 'aktenzeichen', patterns: [/(?:aktenzeichen|mein zeichen|unser zeichen)[:\s]+([\w/\-]+)/i] },
@@ -161,7 +242,13 @@ function harvestReferenceNumbers(ocrText) {
 
 /**
  * Calculates the 'Last Day to Appeal' (Widerspruchsfrist).
- * Logic: Bescheiddatum + 3 days (Bekanntgabefiktion) + 1 month.
+ *
+ * V5.0 Update:
+ * - 2025 Rule: Documents dated >= 2025-01-01 use 4-day delivery fiction
+ *   (updated § 41 II VwVfG / § 37 II SGB X). Pre-2025 docs use 3 days.
+ * - Weekend Shift (§ 193 BGB): If the final deadline falls on a Saturday
+ *   or Sunday, it shifts to the next Monday.
+ * - Month addition guards against overflow (e.g. Jan 31 + 1 month ≠ Mar 3).
  */
 function calculateWiderspruchDeadline(issuedDateStr) {
   if (!issuedDateStr) return null;
@@ -176,15 +263,28 @@ function calculateWiderspruchDeadline(issuedDateStr) {
   const date = new Date(year, month, day);
   if (isNaN(date.getTime())) return null;
 
-  // 3-day delivery fiction (§ 41 II VwVfG / § 37 II SGB X)
-  date.setDate(date.getDate() + 3);
+  // V5.0: 2025 Rule — 4 days for documents issued on or after 2025-01-01
+  const cutoff2025 = new Date(2025, 0, 1); // January 1, 2025
+  const deliveryFictionDays = (date >= cutoff2025) ? 4 : 3;
 
-  // 1-month period (§ 70 VwGO / § 84 SGG)
+  // Delivery fiction (§ 41 II VwVfG / § 37 II SGB X)
+  date.setDate(date.getDate() + deliveryFictionDays);
+
+  // 1-month appeal period (§ 70 VwGO / § 84 SGG)
   const dayBefore = date.getDate();
   date.setMonth(date.getMonth() + 1);
   // Guard against month overflow (e.g. Jan 31 + 1 month ≠ Mar 3)
   if (date.getDate() !== dayBefore) {
     date.setDate(0); // Roll back to last day of previous month
+  }
+
+  // V5.0: Weekend Shift (§ 193 BGB)
+  // If deadline falls on Saturday (6) or Sunday (0), shift to next Monday
+  const dayOfWeek = date.getDay();
+  if (dayOfWeek === 6) {      // Saturday → Monday (+2)
+    date.setDate(date.getDate() + 2);
+  } else if (dayOfWeek === 0) { // Sunday → Monday (+1)
+    date.setDate(date.getDate() + 1);
   }
 
   return date.toLocaleDateString('de-DE');
@@ -384,6 +484,27 @@ export function extractFacts(ocrText) {
     facts.doc_stage = (fullTextLower.includes('mobil') || fullTextLower.includes('handy')) ? 'Mobile' : 'Internet';
   } else {
     facts.doc_stage = 'other';
+  }
+
+  // --- V5.0: CRITICAL ACTION SCANNER ---
+  // Runs independently of doc_stage — these keywords ALWAYS trigger urgent handling.
+  // Uses both fuzzy matching (for OCR resilience) and exact substring (for compound terms).
+  const criticalMatches = [];
+  for (const keyword of KEYWORDS.CRITICAL) {
+    // Exact substring match for multi-word terms (e.g. "pfändungs- und überweisungsbeschluss")
+    if (fullTextLower.includes(keyword)) {
+      criticalMatches.push(keyword);
+    // Fuzzy match for single-word terms or OCR-damaged variants
+    } else if (hasFuzzyKeyword(ocrText, [keyword])) {
+      criticalMatches.push(keyword);
+    }
+  }
+  if (criticalMatches.length > 0) {
+    facts.risk_flags.critical_action = true;
+    facts.risk_flags.critical_keywords = criticalMatches; // V5.0: store for prompt injection
+    for (const kw of criticalMatches) {
+      facts.actions.push({ key: 'critical', priority: 0, reason: `Critical: ${kw}` });
+    }
   }
 
   // --- DATES & TIMES ---
