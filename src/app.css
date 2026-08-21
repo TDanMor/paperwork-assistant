@@ -926,8 +926,9 @@ button, [role="button"], a, input, select, textarea, label,
     letter-spacing: .02em;
   }
 
-  /* Hide perf dropdown in top bar on mobile — accessible from Settings */
-  .perf-dropdown-wrapper { display: none; }
+  /* Make perf dropdown compact on mobile instead of hiding */
+  .perf-trigger { min-width: auto; padding: 0.35rem 0.5rem; }
+  .perf-current-subtitle { display: none; }
 
   /* Override inline min-width on the right-side navbar div */
   .navbar > div:last-child {
