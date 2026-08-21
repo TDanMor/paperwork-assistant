@@ -1,7 +1,21 @@
-﻿import { CreateMLCEngine } from "@mlc-ai/web-llm";
+import { CreateMLCEngine } from "@mlc-ai/web-llm";
 
+/* ─── Active Model Definitions ─────────────────────────────────────
+ * pro:  Phi-3.5-Mini — Advanced reasoning, strong structured JSON output.
+ * lite: Qwen2.5-1.5B — Excellent multilingual support (DE/EN/ES/FR/RO),
+ *       compact VRAM footprint ideal for phones & low-end GPUs.
+ * ────────────────────────────────────────────────────────────────── */
 export const MODELS = {
-  pro: "Llama-3.2-3B-Instruct-q4f16_1-MLC",
+  pro:  "Phi-3.5-mini-instruct-q4f16_1-MLC",
+  lite: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC"
+};
+
+/* ─── Legacy Model Constants (Rollback Safety Net) ────────────────
+ * Preserved in case the new models exhibit regressions on specific
+ * document types. To rollback: swap MODELS values with these.
+ * ────────────────────────────────────────────────────────────────── */
+export const LEGACY_MODELS = {
+  pro:  "Llama-3.2-3B-Instruct-q4f16_1-MLC",
   lite: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
 };
 

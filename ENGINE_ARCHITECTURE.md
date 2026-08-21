@@ -69,7 +69,7 @@ Most AI applications "ask" an LLM to find numbers and dates. This app **"tells"*
 - **The "Highlights Reel"**: AI receives the Header (first 1000 chars) + Verified Fact Sentences + Document Footer (last 500 chars), capped at ~3000 chars.
 
 ### Phase 4: Restricted Narrative Inference (`src/ai/prompts.js`)
-- **Engine**: WebLLM running Llama-3.2 (1B Lite / 3B Pro).
+- **Engine**: WebLLM running Phi-3.5-Mini (Pro) / Qwen2.5-1.5B (Lite).
 - **Role**: A seasoned bilingual administrative clerk explaining a briefing.
 - **Critical Alert Override**: If `critical_action` is flagged, the prompt enforces a serious, urgent tone and explicitly mandates naming the specific legal threat in the first sentence.
 - **Strict JSON Contract**: Forces structured output for UI hydration.

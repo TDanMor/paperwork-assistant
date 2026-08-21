@@ -1,13 +1,15 @@
 import { smartSliceOCR } from './extractor.js';
 
 /**
- * Paperwork Assistant - Human Storyteller Prompting V5.1
+ * Paperwork Assistant - Human Storyteller Prompting V5.2
  *
  * Philosophy: The deterministic layer (extractor.js) finds the WHAT.
  * This prompt layer tells the AI to explain the WHY in plain language.
- * Optimized for Llama-3.2-1B/3B: short, direct instructions with examples.
+ * Compatible with Qwen2.5-1.5B (Lite) and Phi-3.5-Mini (Pro).
+ * Both models support standard chat-completion instruction formatting.
  *
- * V5.1: Aggressive JSON Hunter + deepCleanRescue to guarantee zero
+ * V5.2: Model-agnostic prompt structure (works with Llama, Qwen, Phi).
+ *        Aggressive JSON Hunter + deepCleanRescue to guarantee zero
  *        technical leakage (no XML tags, no JSON keys, no brackets).
  */
 
