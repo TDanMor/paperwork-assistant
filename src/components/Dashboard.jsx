@@ -1,4 +1,4 @@
-﻿import React, { useContext, useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { AppContext } from '../App.jsx';
 import TaskTile from './TaskTile.jsx';
 import GpuGuard from './GpuGuard.jsx';
@@ -67,35 +67,27 @@ export default function Dashboard() {
           <p>📭 {t('dashboard.no_tasks')}</p>
         </div>
       ) : (
-        <div className="kanban-board">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           {URGENCY_ORDER.map(urg => {
             const count = grouped[urg].length;
-            const isOpen = openCols[urg];
+            if (count === 0) return null; // Don't show empty sections in this layout
+
+            // Map urgency to corresponding icon and symbol
+            const urgConfig = {
+              overdue: { icon: '⚠', symbol: '— Act now' },
+              urgent: { icon: '●', symbol: '— This week' },
+              upcoming: { icon: '○', symbol: '— Plan ahead' },
+              informational: { icon: '✓', symbol: '— No action needed' }
+            };
 
             return (
-              <div key={urg} className="kanban-column" style={{ maxHeight: 'none' }}>
-                <div 
-                  className={`kanban-header urgency-heading--${urg}`} 
-                  onClick={() => toggleCol(urg)}
-                  style={{ cursor: 'pointer', userSelect: 'none' }}
-                  title="Click to collapse/expand"
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span style={{ fontSize: '0.8rem' }}>{isOpen ? '▼' : '▶'}</span>
-                    {t(`dashboard.sections.${urg}`)}
-                  </span>
-                  <span className="kanban-count">{count}</span>
+              <div key={urg} className="section" style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+                <div className={`dash-section__heading urgency-heading--${urg}`}>
+                  {urgConfig[urg].icon} {t(`dashboard.sections.${urg}`)} {urgConfig[urg].symbol}
                 </div>
-
-                {isOpen && (
-                  <div className="kanban-cards" style={{ marginTop: '0.75rem' }}>
-                    {count === 0 ? (
-                      <p className="muted" style={{ fontSize: '0.80rem', textAlign: 'center', padding: '1.5rem 0' }}>{t('dashboard.all_clear')}</p>
-                    ) : (
-                      grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)
-                    )}
-                  </div>
-                )}
+                <div className="tile-grid">
+                  {grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)}
+                </div>
               </div>
             );
           })}
