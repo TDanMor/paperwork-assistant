@@ -2,10 +2,51 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
+    <!--
+      viewport-fit=cover: extend into iPhone notch/Dynamic Island area and
+      Android display cutouts. Required for env(safe-area-inset-*) to work.
+    -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Page description (shown in Android Chrome's Add-to-Home-Screen dialog) -->
+    <meta name="description" content="Understand German paperwork in your language — invoices, official notices, and decisions explained simply." />
+
+    <!-- =====================================================
+         PWA / INSTALLED APP EXPERIENCE
+         These make the app look native when added to the home
+         screen on both iOS and Android.
+    ====================================================== -->
+
+    <!-- Android Chrome: enables "Add to Home Screen" banner and standalone mode -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <!-- Android: sets the browser address bar / status bar to match the app accent -->
     <meta name="theme-color" content="#1A7FC4" />
+    <!-- Android: short name shown under the home screen icon -->
+    <meta name="application-name" content="Paperwork" />
+
+    <!-- iOS Safari: enables standalone (full-screen) app mode -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!-- iOS: status bar appearance when running as standalone app -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <!-- iOS: name shown under the home screen icon -->
+    <meta name="apple-mobile-web-app-title" content="Paperwork" />
+
+    <!-- Windows tiles (Edge mobile, Surface) -->
+    <meta name="msapplication-TileColor" content="#1A7FC4" />
+
+    <!--
+      PWA manifest: required for Android Chrome to show the "Add to Home Screen"
+      install prompt. Also controls icon, splash screen, display mode, and
+      orientation lock on Android. iOS reads the apple-* meta tags instead.
+    -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- iOS home screen icon (SVG works on iOS 15.4+; add a PNG fallback for older iOS) -->
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
     <title>Paperwork Assistant</title>
   </head>
   <body>

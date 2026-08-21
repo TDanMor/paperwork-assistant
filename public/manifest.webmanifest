@@ -1,0 +1,30 @@
+{
+  "name": "Paperwork Assistant",
+  "short_name": "Paperwork",
+  "description": "Understand German paperwork in your language — invoices, official notices, and decisions explained simply.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#F2F5F9",
+  "theme_color": "#1A7FC4",
+  "lang": "de",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [],
+  "prefer_related_applications": false
+}
