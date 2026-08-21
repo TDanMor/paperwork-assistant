@@ -467,17 +467,36 @@ button, [role="button"], a, input, select, textarea, label,
 .doc-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: .8rem 1.1rem;
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: border-color .12s, background .12s;
+  min-width: 0;
+  max-width: 100%;
+}
+.doc-row > * {
+  white-space: nowrap;
 }
 .doc-row:hover        { border-color: var(--accent); background: var(--accent-light); }
-.doc-row__name        { flex: 1; font-weight: 600; font-size: .875rem; }
-.doc-row__sender      { font-size: .825rem; color: var(--muted); }
+.doc-row__name        { 
+  flex: 1; 
+  font-weight: 600; 
+  font-size: .875rem; 
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.doc-row__sender      { 
+  font-size: .825rem; 
+  color: var(--muted); 
+  min-width: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ============================================================
    DOCUMENT DETAIL — SPLIT LAYOUT
