@@ -20,7 +20,13 @@
     {
       "src": "/logo-round.png",
       "type": "image/png",
-      "sizes": "192x192",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-round.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512",
       "purpose": "maskable"
     }
   ],
