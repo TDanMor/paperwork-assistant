@@ -88,6 +88,7 @@ button, [role="button"], a, input, select, textarea, label,
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 .main-content {
   flex: 1;
@@ -643,6 +644,7 @@ button, [role="button"], a, input, select, textarea, label,
 
   /* Compact top bar — brand + right controls only */
   .navbar {
+    position: static;
     padding: 0 1rem;
     height: 54px;
     min-height: 54px;
