@@ -755,16 +755,16 @@ button, [role="button"], a, input, select, textarea, label,
   color: var(--text);
 }
 .sentinel-badge:hover { border-color: var(--accent); background: var(--accent-light); }
-.sentinel-dot { font-size: 0.7rem; line-height: 1; }
-.sentinel-badge--ready .sentinel-dot       { color: var(--c-informational); animation: pulse-ready 3s infinite; }
+.sentinel-dot { font-size: 0.9rem; line-height: 1; text-shadow: 0 0 5px currentColor; }
+.sentinel-badge--ready .sentinel-dot       { color: #10B981; animation: pulse-ready 2.5s infinite; }
 .sentinel-badge--limited .sentinel-dot     { color: var(--c-urgent);        animation: pulse-issue 1.5s infinite; }
 .sentinel-badge--unavailable .sentinel-dot { color: var(--c-overdue);       animation: pulse-issue 1s infinite; }
 .sentinel-badge--checking .sentinel-dot    { color: var(--muted); opacity: 0.5; }
 
 @keyframes pulse-ready {
-  0%   { opacity: 0.6; transform: scale(0.9); }
-  50%  { opacity: 1;   transform: scale(1.1); }
-  100% { opacity: 0.6; transform: scale(0.9); }
+  0%   { opacity: 0.7; transform: scale(0.9); }
+  50%  { opacity: 1;   transform: scale(1.3); text-shadow: 0 0 10px #10B981; }
+  100% { opacity: 0.7; transform: scale(0.9); }
 }
 @keyframes pulse-issue {
   0%   { opacity: 0.4; transform: scale(0.85); }
@@ -853,7 +853,7 @@ button, [role="button"], a, input, select, textarea, label,
   .detail-layout { flex-direction: column-reverse; }
   .detail-preview { position: static; width: 100%; }
   .doc-preview-media { height: 50vh; }
-  .perf-dropdown-menu { right: auto; left: 0; }
+  .perf-dropdown-menu { right: 0; left: auto; }
 }
 
 /* ============================================================
@@ -1008,7 +1008,7 @@ button, [role="button"], a, input, select, textarea, label,
 
   /* Perf trigger compact */
   .perf-current-title { font-size: 0.75rem; }
-  .perf-dropdown-menu { width: 220px; right: auto; left: 0; }
+  .perf-dropdown-menu { width: 220px; right: 0; left: auto; }
 }
 
 /* Very small phones — 400px and below */

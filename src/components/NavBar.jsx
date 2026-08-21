@@ -49,15 +49,12 @@ export default function NavBar() {
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, justifyContent: 'flex-end', minWidth: '220px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0, justifyContent: 'flex-end' }}>
         <div className="perf-toggle-container">
           <div className="perf-dropdown-wrapper">
             <div className="perf-trigger">
               <span className="perf-current-title">
                 {activeModelId === MODELS.lite ? '⚡' : '🏆'} {activeModelId === MODELS.lite ? t('settings.lite_title') : t('settings.pro_title')}
-              </span>
-              <span className="perf-current-subtitle">
-                {activeModelId === MODELS.lite ? t('settings.lite_vram') : t('settings.pro_vram')}
               </span>
             </div>
             <div className="perf-dropdown-menu">
