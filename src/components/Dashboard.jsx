@@ -72,18 +72,18 @@ export default function Dashboard() {
             const count = grouped[urg].length;
             if (count === 0) return null; // Don't show empty sections in this layout
 
-            // Map urgency to corresponding icon and symbol
+            // Map urgency to corresponding icon
             const urgConfig = {
-              overdue: { icon: '⚠', symbol: '— Act now' },
-              urgent: { icon: '●', symbol: '— This week' },
-              upcoming: { icon: '○', symbol: '— Plan ahead' },
-              informational: { icon: '✓', symbol: '— No action needed' }
+              overdue: { icon: '⚠' },
+              urgent: { icon: '●' },
+              upcoming: { icon: '○' },
+              informational: { icon: '✓' }
             };
 
             return (
               <div key={urg} className="section" style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div className={`dash-section__heading urgency-heading--${urg}`}>
-                  {urgConfig[urg].icon} {t(`dashboard.sections.${urg}`)} {urgConfig[urg].symbol}
+                  {urgConfig[urg].icon} {t(`dashboard.sections.${urg}`)}
                 </div>
                 <div className="tile-grid">
                   {grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)}
