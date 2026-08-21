@@ -19,8 +19,9 @@ export const LEGACY_MODELS = {
   lite: "Llama-3.2-1B-Instruct-q4f16_1-MLC"
 };
 
-// Default to pro, but can be changed by UI
-export let activeModelId = localStorage.getItem('pa_model_pref') || MODELS.pro;
+// Default to pro on desktop, but auto-default to lite on mobile to prevent VRAM crashes
+const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+export let activeModelId = localStorage.getItem('pa_model_pref') || (isMobile ? MODELS.lite : MODELS.pro);
 export let engine = null;
 let aiActivated = false;
 let isProcessing = false;
