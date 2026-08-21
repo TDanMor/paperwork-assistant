@@ -253,6 +253,10 @@
     "lite_title": "Local Lite mode",
     "no_local_title": "Deterministic mode",
     "recheck_btn": "Re-evaluate Device",
-    "profile_label": "Hardware Profile"
+    "profile_label": "Hardware Profile",
+    "scanning_title": "Analyzing Device...",
+    "scanning_subtitle": "Checking GPU capabilities for local AI",
+    "scan_complete": "Scan Complete",
+    "continue_btn": "Get Started"
   }
 }

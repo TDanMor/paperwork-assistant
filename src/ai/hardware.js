@@ -2,6 +2,10 @@ import { MODELS } from './engine.js';
 
 const STORAGE_KEY = 'paperworkAssistant.deviceProfile.v1';
 
+export function hasCachedProfile() {
+  return !!localStorage.getItem(STORAGE_KEY);
+}
+
 export async function detectCapabilityOnce() {
   // 1. Check cached profile
   const cached = localStorage.getItem(STORAGE_KEY);

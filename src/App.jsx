@@ -13,6 +13,8 @@ import DocumentDetail  from './components/DocumentDetail.jsx';
 import Settings        from './components/Settings.jsx';
 import VaultLock       from './components/VaultLock.jsx';
 import InstallBanner   from './components/InstallBanner.jsx';
+import HardwareScanner from './components/HardwareScanner.jsx';
+import { hasCachedProfile } from './ai/hardware.js';
 import { getAllDocuments, setSessionKey } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
 import { initializeHardware, activeHardwareProfile } from './ai/engine.js';
@@ -26,6 +28,7 @@ const LOCK_AFTER_MS = 15 * 60 * 1000; // 15 Minutes
 const initialState = {
   language:      localStorage.getItem('pa_lang') || 'en',
   modelStatus:   'checking_hardware',   // checking_hardware | idle | loading | ready | error | ready_deterministic
+  showHardwareScan: !hasCachedProfile(),
   modelProgress: 0,        // 0–100
   modelMessage:  '',       // status text from WebLLM
   view:          'dashboard', // dashboard | upload | folders | detail | settings
@@ -38,6 +41,9 @@ const initialState = {
 // ---------- Reducer — one place to update state ----------
 function reducer(state, action) {
   switch (action.type) {
+    case 'FINISH_HARDWARE_SCAN':
+      return { ...state, showHardwareScan: false };
+
     case 'SET_LANGUAGE':
       localStorage.setItem('pa_lang', action.payload);
       return { ...state, language: action.payload };
@@ -117,14 +123,16 @@ export default function App() {
 
   // Initialize hardware capabilities
   useEffect(() => {
-    initializeHardware().then(() => {
-      if (activeHardwareProfile && activeHardwareProfile.tier === 'NO_LOCAL') {
-        dispatch({ type: 'SET_MODEL_STATUS', status: 'ready_deterministic', message: '' });
-      } else {
-        dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: '' });
-      }
-    });
-  }, []);
+    if (!state.showHardwareScan) {
+      initializeHardware().then(() => {
+        if (activeHardwareProfile && activeHardwareProfile.tier === 'NO_LOCAL') {
+          dispatch({ type: 'SET_MODEL_STATUS', status: 'ready_deterministic', message: '' });
+        } else {
+          dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: '' });
+        }
+      });
+    }
+  }, [state.showHardwareScan]);
 
   // Sync language helper whenever it changes
   useEffect(() => {
@@ -149,16 +157,24 @@ export default function App() {
   return (
     <AppContext.Provider value={{ state, dispatch }}>
       <div className="app-wrapper">
-        {/* Model loading banner — visible unless model is ready */}
-        {state.modelStatus !== 'ready' && <ModelLoader />}
+        {/* Hardware Scan Screen */}
+        {state.showHardwareScan && (
+            <HardwareScanner onFinish={() => {
+              dispatch({ type: 'SET_MODEL_STATUS', status: activeHardwareProfile?.tier === 'NO_LOCAL' ? 'ready_deterministic' : 'idle', message: '' });
+              dispatch({ type: 'FINISH_HARDWARE_SCAN' });
+            }} />
+          )}
 
-        <NavBar />
+          {/* Model loading banner — visible unless model is ready */}
+          {(state.modelStatus !== 'ready' && state.modelStatus !== 'ready_deterministic') && <ModelLoader />}
 
-        <main className="main-content">
-          {state.isVaultLocked ? <VaultLock /> : renderView()}
-        </main>
+          <NavBar />
+
+          <main className="main-content">
+            {state.isVaultLocked ? <VaultLock /> : renderView()}
+          </main>
         
-        <InstallBanner />
+          <InstallBanner />
       </div>
     </AppContext.Provider>
   );
