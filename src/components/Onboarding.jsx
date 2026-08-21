@@ -29,7 +29,7 @@ export default function Onboarding({ onFinish }) {
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'var(--surface)',
+      background: 'var(--bg)',
       zIndex: 9999,
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       padding: '2rem',
@@ -37,8 +37,17 @@ export default function Onboarding({ onFinish }) {
       overflowY: 'auto'
     }}>
       <div style={{
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '120vmin', height: '120vmin',
+        backgroundImage: 'url("/logo-round.png")',
+        backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+        opacity: 0.05, zIndex: -1, pointerEvents: 'none'
+      }}></div>
+      
+      <div style={{
         maxWidth: '550px', width: '100%',
-        background: 'var(--bg)',
+        background: 'var(--surface)',
         padding: '2.5rem',
         borderRadius: '16px',
         boxShadow: 'var(--shadow-xl)',
@@ -94,9 +103,15 @@ export default function Onboarding({ onFinish }) {
               </select>
             </div>
 
-            <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '1rem', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '0.75rem', lineHeight: 1.5 }}>
               {t('onboarding.scan_notice')}
             </p>
+
+            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '0.6rem 1rem', borderRadius: '6px', marginBottom: '1.5rem', width: '100%' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 600, opacity: 0.8, display: 'block' }}>
+                {t('onboarding.scan_requirements')}
+              </span>
+            </div>
 
             <button 
               className="btn btn-primary" 

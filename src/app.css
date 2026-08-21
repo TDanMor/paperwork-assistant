@@ -104,7 +104,7 @@ button, [role="button"], a, input, select, textarea, label,
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  opacity: 0.035; /* Barely visible watermark */
+  opacity: 0.05; /* Barely visible watermark */
   z-index: -1;
   pointer-events: none;
 }
