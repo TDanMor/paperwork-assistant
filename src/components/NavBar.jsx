@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { view: 'dashboard', icon: '📊', labelKey: 'nav.dashboard' },
   { view: 'upload',    icon: '📤', labelKey: 'nav.upload'    },
   { view: 'folders',   icon: '📁', labelKey: 'nav.folders'   },
-  { view: 'timeline',  icon: '⏱️', labelKey: 'nav.timeline_view' },
+  { view: 'timeline',  icon: '⏱️', labelKey: 'nav.timeline'  },
   { view: 'settings',  icon: '⚙️', labelKey: 'nav.settings'  },
 ];
 
