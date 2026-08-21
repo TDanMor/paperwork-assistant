@@ -59,6 +59,14 @@ export default function VaultLock() {
 
   return (
     <div className="status-card" style={{ maxWidth: '400px', margin: '4rem auto', position: 'relative', overflow: 'hidden' }}>
+      {/* Inner background watermark for Vault */}
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: '80%', height: '80%', backgroundImage: "url('/logo-round.png')",
+        backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
+        opacity: 0.04, zIndex: 0, pointerEvents: 'none'
+      }}></div>
+
       <div style={{ position: 'relative', zIndex: 1 }}>
         <div className="result-card__icon">🔐</div>
         <h2>{t('vault.title')}</h2>

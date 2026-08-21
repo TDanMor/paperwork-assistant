@@ -856,7 +856,7 @@ button, [role="button"], a, input, select, textarea, label,
   .detail-layout { flex-direction: column-reverse; }
   .detail-preview { position: static; width: 100%; }
   .doc-preview-media { height: 50vh; }
-  .perf-dropdown-menu { right: 0; left: auto; }
+  .perf-dropdown-menu { left: 50%; right: auto; transform: translateX(-50%); }
 }
 
 /* ============================================================
@@ -1011,7 +1011,7 @@ button, [role="button"], a, input, select, textarea, label,
 
   /* Perf trigger compact */
   .perf-current-title { font-size: 0.75rem; }
-  .perf-dropdown-menu { width: 220px; right: 0; left: auto; }
+  .perf-dropdown-menu { width: 220px; left: 50%; right: auto; transform: translateX(-50%); }
 }
 
 /* Very small phones — 400px and below */
