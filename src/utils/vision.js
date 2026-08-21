@@ -17,12 +17,18 @@ export async function assessClarity(source) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      // Resize for faster processing (standardizing to small size is fine for blur check)
-      const scale = Math.min(600 / img.width, 600 / img.height, 1);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
+      // Instead of downscaling (which destroys high-frequency edge details needed for blur detection),
+      // we take a 1000x1000 center crop at 1:1 original pixel scale.
+      const cropWidth = Math.min(1000, img.width);
+      const cropHeight = Math.min(1000, img.height);
+      const startX = (img.width - cropWidth) / 2;
+      const startY = (img.height - cropHeight) / 2;
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+
+      // Draw only the center portion, with no resizing
+      ctx.drawImage(img, startX, startY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
       const width = imageData.width;
