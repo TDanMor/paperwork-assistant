@@ -174,11 +174,9 @@ button, [role="button"], a, input, select, textarea, label,
 }
 .navbar-links {
   display: flex;
-  flex-wrap: wrap;
   gap: .2rem;
   justify-content: center;
-  flex: 1;
-  min-width: 0;
+  flex: 0 1 auto;
 }
 .navbar-version {
   font-size: 0.68rem;
@@ -833,6 +831,11 @@ button, [role="button"], a, input, select, textarea, label,
 @media (max-width: 1024px) {
   .main-content { max-width: 100%; padding: 1.5rem 1.1rem; }
   .kanban-board { grid-template-columns: repeat(2, 1fr); }
+  .navbar-links {
+    order: 3;
+    flex-basis: 100%;
+    margin-top: 0.25rem;
+  }
 }
 
 /* ============================================================
