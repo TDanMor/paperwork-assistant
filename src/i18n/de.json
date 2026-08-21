@@ -243,5 +243,11 @@
     "oct": "Oktober",
     "nov": "November",
     "dec": "Dezember"
+  },
+  "install": {
+    "title": "Install App",
+    "desc_android": "Add to home screen for offline access",
+    "desc_ios": "Tap Share then 'Add to Home Screen'",
+    "btn": "Install"
   }
 }

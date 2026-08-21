@@ -12,6 +12,7 @@ import HistoryView     from './components/HistoryView.jsx';
 import DocumentDetail  from './components/DocumentDetail.jsx';
 import Settings        from './components/Settings.jsx';
 import VaultLock       from './components/VaultLock.jsx';
+import InstallBanner   from './components/InstallBanner.jsx';
 import { getAllDocuments, setSessionKey } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
 
@@ -144,6 +145,8 @@ export default function App() {
         <main className="main-content">
           {state.isVaultLocked ? <VaultLock /> : renderView()}
         </main>
+        
+        <InstallBanner />
       </div>
     </AppContext.Provider>
   );
