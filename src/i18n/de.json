@@ -78,6 +78,14 @@
     "search_results": "Suchergebnisse",
     "no_matches": "Keine Treffer gefunden."
   },
+  "timeline_view": {
+    "title": "Dokumenten-Zeitplan",
+    "subtitle": "Eine chronologische Übersicht Ihrer Unterlagen im zeitlichen Verlauf.",
+    "no_docs": "Noch keine Dokumente hochgeladen.",
+    "next_month": "Nächster Monat",
+    "this_month": "Dieser Monat",
+    "past_archive": "Vergangenheit & Archiv"
+  },
   "detail": {
     "sender": "Absender",
     "type": "Dokumenttyp",

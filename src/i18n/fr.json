@@ -78,6 +78,14 @@
     "search_results": "Résultats de recherche",
     "no_matches": "Aucun résultat trouvé."
   },
+  "timeline_view": {
+    "title": "Chronologie des documents",
+    "subtitle": "Un aperçu chronologique de vos documents dans le temps.",
+    "no_docs": "Aucun document téléchargé pour le moment.",
+    "next_month": "Mois prochain",
+    "this_month": "Ce mois-ci",
+    "past_archive": "Passé et archives"
+  },
   "detail": {
     "sender": "Expéditeur",
     "type": "Type de document",

@@ -1,4 +1,4 @@
-﻿// App.jsx — Root component. Holds all global state in a single useReducer.
+// App.jsx — Root component. Holds all global state in a single useReducer.
 import React, {
   createContext, useContext, useReducer, useEffect,
 } from 'react';
@@ -7,6 +7,8 @@ import ModelLoader     from './components/ModelLoader.jsx';
 import Dashboard       from './components/Dashboard.jsx';
 import Upload          from './components/Upload.jsx';
 import FolderView      from './components/FolderView.jsx';
+import TimelineView    from './components/TimelineView.jsx';
+import HistoryView     from './components/HistoryView.jsx';
 import DocumentDetail  from './components/DocumentDetail.jsx';
 import Settings        from './components/Settings.jsx';
 import VaultLock       from './components/VaultLock.jsx';

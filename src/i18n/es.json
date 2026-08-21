@@ -78,6 +78,14 @@
     "search_results": "Resultados de Búsqueda",
     "no_matches": "No se encontraron coincidencias."
   },
+  "timeline_view": {
+    "title": "Cronología de documentos",
+    "subtitle": "Una visión cronológica de su papeleo a lo largo del tiempo.",
+    "no_docs": "Aún no se han subido documentos.",
+    "next_month": "Próximo mes",
+    "this_month": "Este mes",
+    "past_archive": "Pasado y archivo"
+  },
   "detail": {
     "sender": "Remitente",
     "type": "Tipo de Documento",

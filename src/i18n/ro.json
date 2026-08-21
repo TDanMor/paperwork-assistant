@@ -78,6 +78,14 @@
     "search_results": "Rezultate căutare",
     "no_matches": "Nicio potrivire găsită."
   },
+  "timeline_view": {
+    "title": "Cronologie documente",
+    "subtitle": "O imagine de ansamblu cronologică a documentelor dumneavoastră în timp.",
+    "no_docs": "Niciun document încărcat încă.",
+    "next_month": "Luna viitoare",
+    "this_month": "Luna aceasta",
+    "past_archive": "Trecut și arhivă"
+  },
   "detail": {
     "sender": "Expeditor",
     "type": "Tip Document",

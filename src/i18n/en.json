@@ -78,6 +78,14 @@
     "search_results": "Search Results",
     "no_matches": "No matches found."
   },
+  "timeline_view": {
+    "title": "Document Timeline",
+    "subtitle": "A chronological overview of your paperwork mapped across time.",
+    "no_docs": "No documents uploaded yet.",
+    "next_month": "Next Month",
+    "this_month": "This Month",
+    "past_archive": "Past & Archive"
+  },
   "detail": {
     "sender": "Sender",
     "type": "Document Type",
