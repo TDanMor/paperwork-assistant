@@ -812,11 +812,7 @@ button, [role="button"], a, input, select, textarea, label,
 @media (max-width: 1024px) { .kanban-board { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px)  { .kanban-board { grid-template-columns: 1fr; } }
 
-  .app-wrapper {
-    /* Full status bar clearance at top, home indicator at bottom */
-    padding-top: 0;
-  }
-}
+
 
 /* ============================================================
    RESPONSIVE
