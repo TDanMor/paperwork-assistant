@@ -47,7 +47,7 @@
     "badge_unavailable": "Analyse nicht verfügbar"
   },
   "dashboard": {
-    "title": "Übersicht",
+    "title": "Ihre Dokumente",
     "no_tasks": "Keine Dokumente. Lade dein erstes hoch!",
     "sections": {
       "overdue": "Sofortiges Handeln",
@@ -62,7 +62,13 @@
     "summary_urgent": "{count} diese Woche fällig",
     "summary_upcoming": "{count} auf Ihrem Radar",
     "summary_informational": "{count} für Ihre Unterlagen",
-    "all_clear": "Alles klar in dieser Kategorie"
+    "all_clear": "Alles klar in dieser Kategorie",
+    "sections_suffix": {
+      "overdue": " — Jetzt handeln",
+      "urgent": " — Diese Woche",
+      "upcoming": " — Vorausplanen",
+      "informational": " — Keine Aktion erforderlich"
+    }
   },
   "folders": {
     "title": "Ordner",

@@ -50,7 +50,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="page-container" style={{ maxWidth: '100%' }}>
+    <div className="page-container" style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
       <h1 className="page-title">{t('dashboard.title')}</h1>
 
       {/* Intuitive Human Summary Banner */}
@@ -84,6 +84,7 @@ export default function Dashboard() {
               <div key={urg} className="section" style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
                 <div className={`dash-section__heading urgency-heading--${urg}`}>
                   {urgConfig[urg].icon} {t(`dashboard.sections.${urg}`)}
+                  <span style={{ fontWeight: 600 }}>{t(`dashboard.sections_suffix.${urg}`)}</span>
                 </div>
                 <div className="tile-grid">
                   {grouped[urg].map(doc => <TaskTile key={doc.id} doc={doc} />)}

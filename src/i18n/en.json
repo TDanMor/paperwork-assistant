@@ -47,7 +47,7 @@
     "badge_unavailable": "Analysis Unavailable"
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Your Documents",
     "no_tasks": "No documents yet. Upload your first letter or invoice!",
     "sections": {
       "overdue": "Needs Attention Now",
@@ -62,7 +62,13 @@
     "summary_urgent": "{count} due this week",
     "summary_upcoming": "{count} on your radar",
     "summary_informational": "{count} for your records",
-    "all_clear": "All clear in this category"
+    "all_clear": "All clear in this category",
+    "sections_suffix": {
+      "overdue": " — Act now",
+      "urgent": " — This week",
+      "upcoming": " — Plan ahead",
+      "informational": " — No action needed"
+    }
   },
   "folders": {
     "title": "Document Folders",

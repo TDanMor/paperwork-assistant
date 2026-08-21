@@ -351,8 +351,8 @@ button, [role="button"], a, input, select, textarea, label,
 
 .tile-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.25rem;
 }
 
 /* ============================================================

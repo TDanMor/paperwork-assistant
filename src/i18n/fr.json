@@ -47,7 +47,7 @@
     "badge_unavailable": "Analyse indisponible"
   },
   "dashboard": {
-    "title": "Tableau de bord",
+    "title": "Vos Documents",
     "no_tasks": "Aucun document. Ajoutez votre première facture !",
     "sections": {
       "overdue": "Attention immédiate",
@@ -62,7 +62,13 @@
     "summary_urgent": "{count} cette semaine",
     "summary_upcoming": "{count} à venir",
     "summary_informational": "{count} pour information",
-    "all_clear": "Rien dans cette catégorie"
+    "all_clear": "Rien dans cette catégorie",
+    "sections_suffix": {
+      "overdue": " — Agir maintenant",
+      "urgent": " — Cette semaine",
+      "upcoming": " — Planifier",
+      "informational": " — Aucune action requise"
+    }
   },
   "folders": {
     "title": "Dossiers",

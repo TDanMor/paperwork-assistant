@@ -47,7 +47,7 @@
     "badge_unavailable": "Analiză indisponibilă"
   },
   "dashboard": {
-    "title": "Panou de control",
+    "title": "Documentele Tale",
     "no_tasks": "Niciun document încă. Încarcă prima scrisoare sau factură!",
     "sections": {
       "overdue": "Necesită atenție imediată",
@@ -62,7 +62,13 @@
     "summary_urgent": "{count} cu scadență săptămâna aceasta",
     "summary_upcoming": "{count} în vizor",
     "summary_informational": "{count} pentru arhivă",
-    "all_clear": "Totul este în regulă în această categorie"
+    "all_clear": "Totul este în regulă în această categorie",
+    "sections_suffix": {
+      "overdue": " — Acționează acum",
+      "urgent": " — Săptămâna aceasta",
+      "upcoming": " — Planifică din timp",
+      "informational": " — Nicio acțiune"
+    }
   },
   "folders": {
     "title": "Dosare Documente",

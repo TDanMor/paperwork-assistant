@@ -47,7 +47,7 @@
     "badge_unavailable": "Análisis no disponible"
   },
   "dashboard": {
-    "title": "Panel de Control",
+    "title": "Tus Documentos",
     "no_tasks": "No hay documentos todavía. ¡Suba su primera carta o factura!",
     "sections": {
       "overdue": "Necesita Atención Inmediata",
@@ -62,7 +62,13 @@
     "summary_urgent": "{count} vencen esta semana",
     "summary_upcoming": "{count} en su radar",
     "summary_informational": "{count} para sus registros",
-    "all_clear": "Todo despejado in esta categoría"
+    "all_clear": "Todo despejado in esta categoría",
+    "sections_suffix": {
+      "overdue": " — Actuar ahora",
+      "urgent": " — Esta semana",
+      "upcoming": " — Planificar",
+      "informational": " — Sin acción requerida"
+    }
   },
   "folders": {
     "title": "Carpetas de Documentos",
