@@ -85,8 +85,7 @@ export default function Upload() {
         }
 
         if (!wasAiSuccess) {
-          aiData = getFallbackData();
-          updateItem(item.id, { aiFailed: true });
+          throw new Error(t('upload.badge_unavailable'));
         }
 
         // Step 3: Saving

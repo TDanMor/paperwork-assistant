@@ -34,8 +34,8 @@ VERIFIED FACTS (use these, do not guess):
 
 INSTRUCTIONS:
 Write a JSON object with these keys:
-1. "summary": 3-4 friendly sentences explaining what this letter means and why it was sent. Example: "Your health insurance AOK is confirming they will reimburse you 234.50 EUR for your recent dental treatment. To receive the money, you need to send them your bank account details."
-2. "action_steps_explanation": a list of 1-3 short actions. Example: ["Send your IBAN to AOK by mail or phone", "Keep this letter for your records"]
+1. "summary": 3-4 friendly sentences explaining exactly what this specific letter means and why it was sent. Do NOT copy examples.
+2. "action_steps_explanation": a list of 1-3 short actions to take.
 3. "reference_id_highlight": any reference number you find, or null.
 
 RULES:
@@ -181,6 +181,16 @@ export function parseAIResponse(raw, attentionModel) {
   }
 
   // Clean action steps if they contain technical artifacts
+  if (typeof jsonParsed.action_steps_explanation === 'string') {
+    try {
+      const parsed = JSON.parse(jsonParsed.action_steps_explanation);
+      if (Array.isArray(parsed)) jsonParsed.action_steps_explanation = parsed;
+      else jsonParsed.action_steps_explanation = [jsonParsed.action_steps_explanation];
+    } catch (e) {
+      jsonParsed.action_steps_explanation = [jsonParsed.action_steps_explanation];
+    }
+  }
+
   if (Array.isArray(jsonParsed.action_steps_explanation)) {
     jsonParsed.action_steps_explanation = jsonParsed.action_steps_explanation
       .map(step => typeof step === 'string' ? step.replace(/<[^>]*>/g, '').trim() : String(step))
