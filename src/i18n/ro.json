@@ -44,7 +44,8 @@
     "status_done": "Procesat cu succes!",
     "badge_done": "Gata",
     "badge_failed": "Eșuat",
-    "badge_unavailable": "Analiză indisponibilă"
+    "badge_unavailable": "Analiză indisponibilă",
+    "warning_blurry": "Imaginea pare neclară. Acuratețea poate fi scăzută."
   },
   "dashboard": {
     "title": "Documentele Tale",

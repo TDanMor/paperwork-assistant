@@ -44,7 +44,8 @@
     "status_done": "Successfully processed!",
     "badge_done": "Done",
     "badge_failed": "Failed",
-    "badge_unavailable": "Analysis Unavailable"
+    "badge_unavailable": "Analysis Unavailable",
+    "warning_blurry": "Image looks blurry. Accuracy may be low."
   },
   "dashboard": {
     "title": "Your Documents",

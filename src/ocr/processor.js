@@ -2,6 +2,7 @@
 import Tesseract   from 'tesseract.js';
 import * as pdfjs  from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { assessClarity } from '../utils/vision.js';
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -9,6 +10,7 @@ async function extractFromPDF(file, onProgress) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf         = await pdfjs.getDocument({ data: arrayBuffer }).promise;
   let   fullText    = '';
+  let   worstClarityScore = Infinity;
 
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     onProgress?.(Math.round((pageNum / pdf.numPages) * 60));
@@ -30,6 +32,10 @@ async function extractFromPDF(file, onProgress) {
         viewport,
       }).promise;
 
+      // Clarity check on rendered page
+      const clarity = await assessClarity(canvas.toDataURL());
+      if (clarity.score < worstClarityScore) worstClarityScore = clarity.score;
+
       const ocrResult = await Tesseract.recognize(canvas, 'eng+deu', {
         logger: (m) => {
           if (m.status === 'recognizing text') {
@@ -42,10 +48,15 @@ async function extractFromPDF(file, onProgress) {
   }
 
   onProgress?.(100);
-  return fullText.trim();
+  return {
+    text: fullText.trim(),
+    quality: { score: worstClarityScore === Infinity ? null : worstClarityScore, isBlurry: worstClarityScore < 80 }
+  };
 }
 
 async function extractFromImage(file, onProgress) {
+  const clarity = await assessClarity(file);
+
   const result = await Tesseract.recognize(file, 'eng+deu', {
     logger: (m) => {
       if (m.status === 'recognizing text') {
@@ -53,7 +64,11 @@ async function extractFromImage(file, onProgress) {
       }
     },
   });
-  return result.data.text.trim();
+
+  return {
+    text: result.data.text.trim(),
+    quality: clarity
+  };
 }
 
 export async function processFile(file, onProgress) {

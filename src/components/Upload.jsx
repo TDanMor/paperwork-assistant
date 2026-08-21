@@ -23,6 +23,7 @@ export default function Upload() {
       status: 'pending',
       progress: 0,
       errorMsg: '',
+      warningMsg: '',
       savedDoc: null,
       aiFailed: false
     }));
@@ -35,7 +36,11 @@ export default function Upload() {
       try {
         // Step 1: OCR
         updateItem(item.id, { status: 'processing_ocr', progress: 15 });
-        const ocrText = await processFile(item.file, pct => updateItem(item.id, { progress: 15 + Math.round(pct * 0.4) }));
+        const { text: ocrText, quality } = await processFile(item.file, pct => updateItem(item.id, { progress: 15 + Math.round(pct * 0.4) }));
+
+        if (quality?.isBlurry) {
+          updateItem(item.id, { warningMsg: t('upload.warning_blurry') });
+        }
 
         // Step 2: AI Analysis (With Patient Auto-Retry)
         let aiData = null;
@@ -182,6 +187,11 @@ export default function Upload() {
                     {item.status === 'done' && t('upload.status_done')}
                     {item.status === 'error' && `${t('model.error')}: ${item.errorMsg}`}
                   </p>
+                  {item.warningMsg && (
+                    <p style={{ color: 'var(--c-urgent)', fontSize: '0.7rem', fontWeight: 600, margin: '0.1rem 0 0' }}>
+                      ⚠️ {item.warningMsg}
+                    </p>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

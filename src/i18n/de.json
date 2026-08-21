@@ -44,7 +44,8 @@
     "status_done": "Erfolgreich verarbeitet!",
     "badge_done": "Erledigt",
     "badge_failed": "Fehlgeschlagen",
-    "badge_unavailable": "Analyse nicht verfügbar"
+    "badge_unavailable": "Analyse nicht verfügbar",
+    "warning_blurry": "Bild ist unscharf. Die Erkennung könnte ungenau sein."
   },
   "dashboard": {
     "title": "Ihre Dokumente",
