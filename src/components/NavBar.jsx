@@ -84,11 +84,6 @@ export default function NavBar() {
 
         <LangSwitcher variant="compact" />
       </div>
-
-        <GpuGuard />
-
-        <LangSwitcher variant="compact" />
-      </div>
     </nav>
   );
 }
