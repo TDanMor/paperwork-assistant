@@ -243,5 +243,18 @@
     "scanning_subtitle": "Checking GPU capabilities for local AI",
     "scan_complete": "Scan Complete",
     "continue_btn": "Get Started"
+  },
+  "onboarding": {
+    "welcome_title": "Welcome to Paperwork Assistant",
+    "welcome_subtitle": "Your 100% private, on-device document AI.",
+    "feat_local_title": "100% Local & Private",
+    "feat_local_desc": "No data ever leaves your device. Everything runs directly in your browser.",
+    "feat_data_title": "Complete Data Control",
+    "feat_data_desc": "Easily clear your workspace anytime, or create password-encrypted backups.",
+    "feat_sync_title": "Smart Calendar Sync",
+    "feat_sync_desc": "Automatically extract deadlines and sync them with Google Calendar.",
+    "scan_notice": "To ensure smooth performance and avoid crashes, we will now quickly scan your device to assign the best compatible AI model.",
+    "btn_scan": "Start Hardware Scan",
+    "select_language": "Select Language"
   }
 }
