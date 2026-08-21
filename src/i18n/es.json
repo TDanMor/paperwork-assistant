@@ -250,15 +250,21 @@
     "btn": "Install"
   },
   "hardware": {
-    "pro_title": "Local PRO mode",
-    "lite_title": "Local Lite mode",
-    "no_local_title": "Deterministic mode",
-    "recheck_btn": "Re-evaluate Device",
-    "profile_label": "Hardware Profile",
-    "scanning_title": "Analyzing Device...",
-    "scanning_subtitle": "Checking GPU capabilities for local AI",
-    "scan_complete": "Scan Complete",
-    "continue_btn": "Get Started"
+    "pro_title": "Modo PRO local",
+    "lite_title": "Modo LITE local",
+    "no_local_title": "Modo Estándar",
+    "recheck_btn": "Re-evaluar dispositivo",
+    "profile_label": "Perfil de Hardware",
+    "scanning_title": "Analizando dispositivo...",
+    "scanning_subtitle": "Comprobando capacidades de hardware para procesamiento local",
+    "scan_complete": "Escaneo completo",
+    "continue_btn": "Empezar",
+    "reason_no_webgpu": "WebGPU no está disponible en este navegador. Utilizando procesamiento estándar.",
+    "reason_no_adapter": "No se encontró un adaptador GPU adecuado. Utilizando procesamiento estándar.",
+    "reason_low_ram": "La memoria RAM es demasiado baja (<4GB) para un procesamiento local seguro.",
+    "reason_mobile": "Dispositivo móvil detectado; utilizando la versión Lite optimizada para evitar fallos de memoria.",
+    "reason_pro": "Potente GPU de escritorio y RAM suficiente detectados; utilizando versión PRO.",
+    "reason_lite": "El escritorio soporta WebGPU pero con límites modestos; utilizando versión LITE."
   },
   "onboarding": {
     "welcome_title": "Bienvenido a Paperwork Assistant",

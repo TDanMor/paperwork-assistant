@@ -234,15 +234,21 @@
     "btn": "Install"
   },
   "hardware": {
-    "pro_title": "Local PRO mode",
-    "lite_title": "Local Lite mode",
-    "no_local_title": "Deterministic mode",
-    "recheck_btn": "Re-evaluate Device",
-    "profile_label": "Hardware Profile",
-    "scanning_title": "Analyzing Device...",
-    "scanning_subtitle": "Checking GPU capabilities for local AI",
-    "scan_complete": "Scan Complete",
-    "continue_btn": "Get Started"
+    "pro_title": "Modul PRO local",
+    "lite_title": "Modul LITE local",
+    "no_local_title": "Modul Standard",
+    "recheck_btn": "Reevaluează dispozitivul",
+    "profile_label": "Profil Hardware",
+    "scanning_title": "Analizare dispozitiv...",
+    "scanning_subtitle": "Se verifică capacitățile hardware pentru procesare locală",
+    "scan_complete": "Scanare finalizată",
+    "continue_btn": "Începe",
+    "reason_no_webgpu": "WebGPU nu este disponibil în acest browser. Se folosește procesarea standard.",
+    "reason_no_adapter": "Nu s-a găsit un adaptor GPU adecvat. Se folosește procesarea standard.",
+    "reason_low_ram": "Memoria RAM este prea mică (<4GB) pentru o procesare locală sigură.",
+    "reason_mobile": "Dispozitiv mobil detectat; se folosește versiunea Lite optimizată pentru a preveni blocajele de memorie.",
+    "reason_pro": "GPU de desktop puternic și RAM suficient detectate; se folosește versiunea PRO.",
+    "reason_lite": "Desktopul suportă WebGPU, dar cu limite modeste; se folosește versiunea LITE."
   },
   "onboarding": {
     "welcome_title": "Bun venit la Paperwork Assistant",

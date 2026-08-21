@@ -143,7 +143,11 @@ export default function Settings() {
                  activeHardwareProfile.tier === 'LITE' ? t('hardware.lite_title') : 
                  t('hardware.no_local_title')}
               </h3>
-              <p style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '0.2rem' }}>{activeHardwareProfile.reason}</p>
+              <p style={{ fontSize: '0.85rem', opacity: 0.9, marginTop: '0.2rem' }}>
+                {activeHardwareProfile.reasonKey 
+                  ? t(`hardware.${activeHardwareProfile.reasonKey}`) 
+                  : activeHardwareProfile.reason}
+              </p>
               <div style={{ marginTop: '0.5rem' }}>
                 <button className="btn btn-outline btn-sm" onClick={() => {
                   resetHardwareProfile();

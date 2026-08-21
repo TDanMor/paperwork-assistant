@@ -160,7 +160,11 @@ export default function Onboarding({ onFinish }) {
                  activeHardwareProfile?.tier === 'LITE' ? t('hardware.lite_title') : 
                  t('hardware.no_local_title')}
               </strong>
-              <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{activeHardwareProfile?.reason}</p>
+              <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {activeHardwareProfile?.reasonKey 
+                  ? t(`hardware.${activeHardwareProfile.reasonKey}`) 
+                  : activeHardwareProfile?.reason}
+              </p>
             </div>
 
             <button 

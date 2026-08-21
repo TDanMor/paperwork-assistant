@@ -252,14 +252,20 @@
   },
   "hardware": {
     "pro_title": "Local PRO mode",
-    "lite_title": "Local Lite mode",
-    "no_local_title": "Deterministic mode",
+    "lite_title": "Local LITE mode",
+    "no_local_title": "Standard mode",
     "recheck_btn": "Re-evaluate Device",
     "profile_label": "Hardware Profile",
     "scanning_title": "Analyzing Device...",
-    "scanning_subtitle": "Checking GPU capabilities for local AI",
+    "scanning_subtitle": "Checking capabilities for local processing",
     "scan_complete": "Scan Complete",
-    "continue_btn": "Get Started"
+    "continue_btn": "Get Started",
+    "reason_no_webgpu": "WebGPU is not available in this browser. Using standard processing.",
+    "reason_no_adapter": "No suitable GPU adapter found. Using standard processing.",
+    "reason_low_ram": "RAM is too low (<4GB) for safe local processing.",
+    "reason_mobile": "Mobile device detected; using highly optimized Lite version to prevent memory crashes.",
+    "reason_pro": "Powerful Desktop GPU and sufficient RAM detected; using PRO version.",
+    "reason_lite": "Desktop supports WebGPU but with modest limits; using LITE version."
   },
   "onboarding": {
     "welcome_title": "Welcome to Paperwork Assistant",

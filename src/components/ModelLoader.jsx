@@ -48,7 +48,11 @@ export default function ModelLoader() {
             <strong style={{ display: 'block', marginBottom: '0.2rem', color: 'var(--primary)' }}>
               {activeHardwareProfile.tier === 'PRO' ? t('hardware.pro_title') : t('hardware.lite_title')}
             </strong>
-            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>{activeHardwareProfile.reason}</span>
+            <span style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+              {activeHardwareProfile.reasonKey 
+                ? t(`hardware.${activeHardwareProfile.reasonKey}`) 
+                : activeHardwareProfile.reason}
+            </span>
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', width: '100%', justifyContent: 'space-between' }}>

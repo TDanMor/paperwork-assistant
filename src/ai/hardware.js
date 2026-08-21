@@ -22,7 +22,8 @@ export async function detectCapabilityOnce() {
     const profile = {
       tier: 'NO_LOCAL',
       model: null,
-      reason: 'WebGPU is not available in this browser. AI will be bypassed.',
+      reasonKey: 'reason_no_webgpu',
+      reason: 'WebGPU is not available in this browser. Using standard processing.',
       checkedAt: new Date().toISOString()
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -40,6 +41,7 @@ export async function detectCapabilityOnce() {
     const profile = {
       tier: 'NO_LOCAL',
       model: null,
+      reasonKey: 'reason_no_adapter',
       reason: 'No suitable GPU adapter found for WebGPU.',
       checkedAt: new Date().toISOString()
     };
@@ -64,14 +66,16 @@ export async function detectCapabilityOnce() {
     profile = {
       tier: 'NO_LOCAL',
       model: null,
-      reason: 'RAM is too low (<4GB) for safe local AI execution.',
+      reasonKey: 'reason_low_ram',
+      reason: 'RAM is too low (<4GB) for safe local processing.',
     };
   } else if (isMobile) {
     // Mobile / tablet ALWAYS gets Lite to prevent VRAM crashes.
     profile = {
       tier: 'LITE',
       model: MODELS.lite,
-      reason: 'Mobile device detected; using highly optimized Lite model to prevent memory crashes.',
+      reasonKey: 'reason_mobile',
+      reason: 'Mobile device detected; using highly optimized Lite version to prevent memory crashes.',
     };
   } else {
     // Desktop / laptop
@@ -79,13 +83,15 @@ export async function detectCapabilityOnce() {
       profile = {
         tier: 'PRO',
         model: MODELS.pro,
-        reason: 'Powerful Desktop GPU and sufficient RAM detected; using PRO local model.',
+        reasonKey: 'reason_pro',
+        reason: 'Powerful Desktop GPU and sufficient RAM detected; using PRO version.',
       };
     } else {
       profile = {
         tier: 'LITE',
         model: MODELS.lite,
-        reason: 'Desktop supports WebGPU but with modest limits; using Lite local model.',
+        reasonKey: 'reason_lite',
+        reason: 'Desktop supports WebGPU but with modest limits; using LITE version.',
       };
     }
   }
