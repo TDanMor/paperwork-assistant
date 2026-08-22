@@ -480,13 +480,24 @@ export function extractFacts(ocrText) {
     facts.actions.push({ key: 'respond', priority: 1, reason: 'Duty to cooperate (Mitwirkungspflicht)' });
   } else if (hasFuzzyKeyword(ocrText, ['bescheinigung'])) {
     facts.doc_stage = 'bescheinigung';
-  } else if (facts.sender.match(/1&1|Vodafone|Telekom/i)) {
-    /* V5.3: DSL / Internet keywords take absolute priority over "Mobile".
+  } else if (facts.sender.match(/1&1|Vodafone|Telekom|O2/i)) {
+    /* V5.4: DSL / Internet keywords take absolute priority over "Mobile".
      * Telecom invoices often mention "Mobilfunk" in the footer even for
      * pure DSL contracts. If DSL or Internet appears ANYWHERE, it's Internet. */
-    const hasDSL = fullTextLower.includes('dsl') || fullTextLower.includes('internet') || fullTextLower.includes('breitband') || fullTextLower.includes('glasfaser') || fullTextLower.includes('festnetz');
-    const hasMobile = fullTextLower.includes('mobil') || fullTextLower.includes('handy');
-    facts.doc_stage = hasDSL ? 'Internet' : (hasMobile ? 'Mobile' : 'Internet');
+    const hasDSL = fullTextLower.includes('dsl') || fullTextLower.includes('internet') || 
+                   fullTextLower.includes('breitband') || fullTextLower.includes('glasfaser') || 
+                   fullTextLower.includes('festnetz') || fullTextLower.includes('wlan') || 
+                   fullTextLower.includes('router') || fullTextLower.includes('kabel');
+    const hasMobile = fullTextLower.includes('mobil') || fullTextLower.includes('handy') || fullTextLower.includes('smartphone');
+    
+    // Explicit override to guarantee it never falls back to Mobile if DSL/Internet is present
+    if (hasDSL) {
+      facts.doc_stage = 'Internet';
+    } else if (hasMobile) {
+      facts.doc_stage = 'Mobile';
+    } else {
+      facts.doc_stage = 'Internet'; // Default fallback
+    }
   } else {
     facts.doc_stage = 'other';
   }

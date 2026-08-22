@@ -52,14 +52,14 @@ export function buildSystemPrompt(language, attentionModel) {
 - Recommend the user seek professional help (Schuldnerberatung, lawyer, Jobcenter) if applicable.`;
   }
 
-  /* ─── V5.3 Prompt Lockdown ──────────────────────────────────────
+  /* ─── V5.4 Prompt Lockdown ──────────────────────────────────────
    * Line 1 = Language anchor (critical for 0.5B attention span).
    * Flat 3-key JSON prevents the tiny model from hallucinating
    * complex nested structures it cannot reliably close.
    * Markdown ban stops ```json leakage on Qwen-0.5B.
    * Storyteller rule prevents raw German echo.
    * ────────────────────────────────────────────────────────────── */
-  return `Write EVERYTHING in ${langName}. Translate all German meaning into ${langName} immediately. Do not repeat or echo German phrases unless the user's language IS German.
+  return `You are a ${langName} storytelling assistant. NEVER write German sentences in the summary. Translate the intent immediately.
 
 VERIFIED FACTS (use these, do not guess):
 - From: ${facts.sender}
@@ -140,6 +140,28 @@ function deepCleanRescue(raw) {
       .replace(/^(Here is|Here's|Below is|The following is|I hope this helps|Let me know)[^.]*[.:]?\s*/i, '')
       .replace(/^(Summary|Briefing|Description|Document Summary|Explanation)\s*[:]\s*/i, '')
       .trim();
+  }
+
+  // V5.4 Anti-Leakage Truncation
+  // Stop narrative if the AI started dumping arrays or unclosed JSON properties mid-string
+  const leakIndex1 = text.indexOf('", [');
+  const leakIndex2 = text.indexOf('["');
+  const leakIndex3 = text.indexOf('", "');
+  
+  const minIndex = Math.min(
+    leakIndex1 > -1 ? leakIndex1 : Infinity,
+    leakIndex2 > -1 ? leakIndex2 : Infinity,
+    leakIndex3 > -1 ? leakIndex3 : Infinity
+  );
+
+  if (minIndex !== Infinity) {
+    text = text.substring(0, minIndex).trim();
+  }
+
+  // V5.4: Force-kill common German legal footer leakage
+  const footerMatch = text.match(/Einzelhäftsführer|Amtsgericht|USt-IdNr|HRB /i);
+  if (footerMatch && footerMatch.index) {
+    text = text.substring(0, footerMatch.index).trim();
   }
 
   // Final quality gate: must have enough readable content
