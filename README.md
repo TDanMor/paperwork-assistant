@@ -22,8 +22,8 @@ Unlike typical AI apps that ask an LLM to guess dates, numbers, and legal conseq
 
 ## 🚀 Key Features
 
-- 🔒 **100% Private & Offline-First**: Powered by **WebLLM** (Phi-3.5-Mini / Qwen2.5-1.5B running via WebGPU) and local **Tesseract.js** OCR. Your documents, images, and personal data never leave your browser.
-- ⚙️ **Smart Hardware Profiling**: Automatically detects GPU capability and system RAM on first load to dynamically assign the safest model tier (Pro, Lite, or Standard deterministic fallback), completely preventing browser OOM crashes on older devices.
+- 🔒 **100% Private & Offline-First**: Powered by **WebLLM** (Phi-3.5-Mini / Qwen2.5-0.5B running via WebGPU) and local **Tesseract.js** OCR. Your documents, images, and personal data never leave your browser.
+- ⚙️ **Smart Hardware Profiling**: Automatically detects GPU capability and system RAM on first load to dynamically assign the safest model tier (Pro, Ultra-Stable Lite, or Standard deterministic fallback), completely preventing browser OOM crashes on older devices.
 - ⏱️ **Deadline & Timeline Tracking**: Dedicated chronological **Timeline & Deadlines** view categorizing upcoming action items, current month tasks, and past archives.
 - ⚖️ **Practitioner-Grade German Bureaucracy Support**:
   - Full **Steuernummer** (all 16 Bundesländer + 13-digit standard Bundesschema), **RV-Nummer** (Rentenversicherung), and **BG-Nummer** (Jobcenter) recognition.
@@ -69,7 +69,7 @@ Unlike typical AI apps that ask an LLM to guess dates, numbers, and legal conseq
 ## 💻 Tech Stack
 
 - **Frontend Framework**: React 18 + Vite
-- **Local AI Inference**: [@mlc-ai/web-llm](https://github.com/mlc-ai/web-llm) (Phi-3.5-Mini / Qwen2.5-1.5B via WebGPU)
+- **Local AI Inference**: [@mlc-ai/web-llm](https://github.com/mlc-ai/web-llm) (Phi-3.5-Mini / Qwen2.5-0.5B via WebGPU)
 - **Local OCR**: Tesseract.js
 - **Persistence & Storage**: IndexedDB (`idb`) + Web Crypto API (AES-GCM-256)
 - **Styling**: Modern CSS with CSS custom properties & mobile-first layout
