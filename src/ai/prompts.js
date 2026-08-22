@@ -50,28 +50,26 @@ RULES:
 - Translate all German meaning into ${langName} immediately.`;
 
   if (isLite) {
-    // 🪶 LITE STRATEGY: Few-Shot Pattern (Best for 0.5B models)
+    // 🪶 LITE STRATEGY: Zero-Shot Simple Formatting (Perplexity Architecture)
     
-    let stepsGuidance = '';
+    let explicitSteps = `Give the most important action the reader should take based on the document.`;
     if (facts.is_direct_debit) {
-      stepsGuidance = `\nFor the STEPS section, you MUST translate and use exactly this text: "No manual payment required. The money will be automatically deducted."`;
+      explicitSteps = `Translate this exact text into ${langName}: "No manual payment required. The money will be deducted automatically."`;
     } else if (facts.polarity_overall === 'nachzahlung') {
-      stepsGuidance = `\nFor the STEPS section, you MUST translate and use exactly this text: "Please pay ${amount} manually to ${facts.sender}."`;
+      explicitSteps = `Translate this exact text into ${langName}: "Please pay ${amount} manually to ${facts.sender}."`;
     }
 
-    return `${basePrompt}
+    return `Explain the document for a ${langName}-speaking user. 
+Do not invent information. Use only the document text and verified data.
 
-EXAMPLE OF A PERFECT RESPONSE IN ENGLISH:
-SUMMARY:
-This document is from EnergyCorp. They are informing you about a scheduled water meter replacement on October 12th between 08:00 and 12:00. You need to ensure access to the basement.
-STEPS:
-Add the appointment to your calendar; Ensure the basement is accessible.
-REF:
-499102-B
+VERIFIED FACTS:
+- Sender: ${facts.sender}
+- Amount: ${amount}
+${relationship}
 
-INSTRUCTIONS FOR THE REAL DOCUMENT:
-Write a similar response in ${langName}. Summarize the actual content of the SOURCE DATA.
-You must use the exact same format (SUMMARY:, STEPS:, REF:).${stepsGuidance}`;
+SUMMARY: Give a short factual explanation of what the letter means in ${langName}.
+STEPS: ${explicitSteps}
+REF: Extract the reference number, or write N/A.`;
   }
 
   // Direct Debit Armor (For PRO only, as LITE uses explicit string injection)
