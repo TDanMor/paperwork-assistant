@@ -1,16 +1,19 @@
 import { smartSliceOCR } from './extractor.js';
 
 /**
- * Paperwork Assistant - Human Storyteller Prompting V5.2
+ * Paperwork Assistant - Human Storyteller Prompting V5.3
  *
  * Philosophy: The deterministic layer (extractor.js) finds the WHAT.
  * This prompt layer tells the AI to explain the WHY in plain language.
- * Compatible with Qwen2.5-1.5B (Lite) and Phi-3.5-Mini (Pro).
- * Both models support standard chat-completion instruction formatting.
+ * Compatible with Qwen2.5-0.5B (Ultra-Stable) and Phi-3.5-Mini (Pro).
  *
- * V5.2: Model-agnostic prompt structure (works with Llama, Qwen, Phi).
- *        Aggressive JSON Hunter + deepCleanRescue to guarantee zero
- *        technical leakage (no XML tags, no JSON keys, no brackets).
+ * V5.3: Prompt Lockdown for tiny models.
+ *        - Language command is the FIRST line (anchors 0.5B attention).
+ *        - Flat 3-key JSON only (summary, steps, ref).
+ *        - Explicit markdown ban to prevent code-fence leakage.
+ *        - Storyteller rule: translate German meaning, never echo German.
+ *        - Aggressive JSON Hunter + deepCleanRescue to guarantee zero
+ *          technical leakage (no XML tags, no JSON keys, no brackets).
  */
 
 export function buildSystemPrompt(language, attentionModel) {
@@ -49,22 +52,30 @@ export function buildSystemPrompt(language, attentionModel) {
 - Recommend the user seek professional help (Schuldnerberatung, lawyer, Jobcenter) if applicable.`;
   }
 
-  return `You explain German letters to regular people. Write in ${langName}.
+  /* ─── V5.3 Prompt Lockdown ──────────────────────────────────────
+   * Line 1 = Language anchor (critical for 0.5B attention span).
+   * Flat 3-key JSON prevents the tiny model from hallucinating
+   * complex nested structures it cannot reliably close.
+   * Markdown ban stops ```json leakage on Qwen-0.5B.
+   * Storyteller rule prevents raw German echo.
+   * ────────────────────────────────────────────────────────────── */
+  return `Write EVERYTHING in ${langName}. Translate all German meaning into ${langName} immediately. Do not repeat or echo German phrases unless the user's language IS German.
 
 VERIFIED FACTS (use these, do not guess):
 - From: ${facts.sender}
 - About: ${topic}${amount ? `\n- Amount: ${amount}` : ''}${idBlock}${contextBlock}
 
 INSTRUCTIONS:
-Write a JSON object with these keys:
-1. "summary": 3-4 friendly sentences explaining exactly what this specific letter means and why it was sent. Do NOT copy examples.
-2. "action_steps_explanation": a list of 1-3 short actions to take.
-3. "reference_id_highlight": any reference number you find, or null.
+Reply with a flat JSON object with exactly 3 keys:
+{"summary": "...", "steps": "...", "ref": "..."}
+
+- "summary": 3-4 friendly sentences explaining what this letter means and why it was sent. Be specific: use exact amounts, dates, and names.
+- "steps": 1-3 short actions the person should take, separated by semicolons.
+- "ref": any reference number you find, or null.
 
 RULES:
-- Be specific: use exact amounts, dates, and names from the text.
-- Never say "check the document" — YOU are the one reading it for the user.${facts.is_direct_debit ? '\n- MANDATORY: This bill uses Direct Debit (Lastschrift). Tell the user clearly that the amount will be deducted automatically from their account and they do NOT need to do anything. Stop telling them to send bank details.' : ''}${facts.polarity_overall === 'nachzahlung' ? '\n- MANDATORY: The user OWES this money. Never say they will "receive money".' : ''}${criticalBlock}
-- Respond ONLY with the JSON object. Do NOT add any tags, headers, or explanations outside of the JSON. No XML, no markdown, no code blocks. Just the raw JSON object starting with { and ending with }.`;
+- Never say "check the document" — YOU are the one reading it for the user.${facts.is_direct_debit ? '\n- MANDATORY: This bill uses Direct Debit (Lastschrift). Tell the user the amount is deducted automatically and they do NOT need to act.' : ''}${facts.polarity_overall === 'nachzahlung' ? '\n- MANDATORY: The user OWES this money. Never say they will "receive money".' : ''}${criticalBlock}
+- Do NOT use markdown code blocks (\`\`\`). Do NOT start your answer with the word "json". Output ONLY the raw curly brackets {}.`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
@@ -91,12 +102,10 @@ function germanDateToISO(dateStr) {
  * Deep Clean Rescue — strips ALL technical artifacts from an AI response
  * so only human-readable narrative text remains.
  *
- * Removes (recursively until stable):
- *  - XML/HTML tags (<document_summary>, </anything>, <br/>, etc.)
- *  - JSON key patterns ("summary":, "action_steps_explanation":, etc.)
- *  - Markdown code fences (```json ... ```)
- *  - Stray JSON brackets, braces, colons, and quotes
- *  - Common LLM prefixes ("Here is the summary:", "Summary:", etc.)
+ * V5.3 additions:
+ *  - Surgically removes leading "json" word (Qwen-0.5B habit)
+ *  - Strips stray backticks before any other processing
+ *  - Handles the new flat keys: summary, steps, ref
  */
 function deepCleanRescue(raw) {
   if (!raw || raw.trim().length < 20) return null;
@@ -108,13 +117,16 @@ function deepCleanRescue(raw) {
   while (text !== prev) {
     prev = text;
     text = text
+      // 0. V5.3: Kill stray backticks and leading "json" word FIRST
+      .replace(/`/g, '')
+      .replace(/^\s*json\s*/i, '')
       // 1. Kill ALL XML/HTML tags (opening, closing, self-closing)
       .replace(/<\/?[a-zA-Z_][\w.-]*(?:\s[^>]*)?\/?>/g, '')
-      // 2. Kill markdown code fences
-      .replace(/```[\s\S]*?```/g, '')
-      .replace(/```/g, '')
-      // 3. Kill JSON key patterns: "key": or "key" :
-      .replace(/"(?:summary|action_steps_explanation|action_steps|reference_id_highlight|reference_id|steps|actions|explanation|document_summary|briefing)"\s*:\s*/gi, '')
+      // 2. Kill markdown code fences (triple backtick blocks already stripped above)
+      // 3. Kill JSON key patterns (V5.3: added flat-schema keys: steps, ref)
+      .replace(/"(?:summary|action_steps_explanation|action_steps|reference_id_highlight|reference_id|steps|actions|explanation|document_summary|briefing|ref)"?\s*:\s*/gi, '')
+      // 3b. V5.3: Kill UNQUOTED key patterns (0.5B sometimes omits quotes)
+      .replace(/\b(?:summary|steps|ref|action_steps_explanation|reference_id_highlight)\s*:\s*/gi, '')
       // 4. Kill leading/trailing braces and brackets
       .replace(/^\s*[{[\]},]+/g, '')
       .replace(/[{[\]},]+\s*$/g, '')
@@ -125,7 +137,7 @@ function deepCleanRescue(raw) {
       .replace(/^\s*"+\s*/gm, '')
       .replace(/\s*"+\s*$/gm, '')
       // 7. Kill common LLM prefixes/suffixes
-      .replace(/^(Here is|Here's|Below is|The following is|I hope this helps|Let me know)[^.]*[.:]\s*/i, '')
+      .replace(/^(Here is|Here's|Below is|The following is|I hope this helps|Let me know)[^.]*[.:]?\s*/i, '')
       .replace(/^(Summary|Briefing|Description|Document Summary|Explanation)\s*[:]\s*/i, '')
       .trim();
   }
@@ -133,25 +145,41 @@ function deepCleanRescue(raw) {
   // Final quality gate: must have enough readable content
   if (text.length < 20) return null;
 
-  // Take up to 3 clean sentences
+  // Take up to 4 clean sentences
   const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.length > 10);
   return sentences.length > 0 ? sentences.slice(0, 4).join(' ') : text.substring(0, 500);
 }
 
 /**
- * Aggressive JSON Hunter — finds the outermost { ... } in the AI response,
- * repairs common LLM mistakes, and parses it.
+ * Aggressive JSON Hunter V5.3
+ * Finds the outermost { ... } in the AI response, repairs common LLM
+ * mistakes, and parses it. Now handles both the legacy 3-key schema
+ * (summary, action_steps_explanation, reference_id_highlight) AND the
+ * new flat schema (summary, steps, ref).
+ *
+ * V5.3: Pre-strips "json" prefix and backticks before brace search.
+ *       Fixes unquoted keys (summary: "..." → "summary": "...").
  */
 function aggressiveJSONParse(raw) {
   if (!raw) return null;
 
+  // V5.3: Pre-clean — strip backticks and leading "json" word
+  let cleaned = raw
+    .replace(/`/g, '')
+    .replace(/^\s*json\s*/i, '');
+
   // Find the FIRST { and the LAST } in the entire response
-  const firstBrace = raw.indexOf('{');
-  const lastBrace = raw.lastIndexOf('}');
+  const firstBrace = cleaned.indexOf('{');
+  const lastBrace = cleaned.lastIndexOf('}');
 
   if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) return null;
 
-  let candidate = raw.substring(firstBrace, lastBrace + 1);
+  let candidate = cleaned.substring(firstBrace, lastBrace + 1);
+
+  // V5.3: Fix unquoted keys — summary: → "summary":
+  candidate = candidate
+    .replace(/(?<=\{|,)\s*(summary|steps|ref|action_steps_explanation|action_steps|reference_id_highlight|reference_id)\s*:/gi,
+      (_, key) => `"${key.toLowerCase()}":`)
 
   // Repair common LLM JSON mistakes
   candidate = candidate
@@ -164,16 +192,29 @@ function aggressiveJSONParse(raw) {
 
   // Attempt 1: Direct parse
   try {
-    return JSON.parse(candidate);
+    const parsed = JSON.parse(candidate);
+    return normalizeKeys(parsed);
   } catch (e) { /* continue */ }
 
   // Attempt 2: Re-extract with a more targeted regex (handles nested content)
+  // Supports both old schema (action_steps_explanation) and new flat schema (steps)
   try {
-    const reMatch = raw.match(/\{\s*"summary"\s*:\s*"([\s\S]*?)"\s*,\s*"action_steps_explanation"\s*:\s*\[([\s\S]*?)\]/);
+    const reMatch = cleaned.match(/\{\s*"summary"\s*:\s*"([\s\S]*?)"\s*,\s*"(?:steps|action_steps_explanation)"\s*:\s*(?:"([\s\S]*?)"|\[([\s\S]*?)\])/);
     if (reMatch) {
       const summary = reMatch[1].replace(/\\"/g, '"').replace(/"/g, '\\"');
-      const stepsRaw = reMatch[2];
-      const steps = stepsRaw.match(/"([^"]*)"/g)?.map(s => s.replace(/"/g, '')) || [];
+      const stepsStr = reMatch[2];  // flat string format
+      const stepsArr = reMatch[3];  // array format
+
+      let steps;
+      if (stepsStr) {
+        // Flat string: split by semicolons
+        steps = stepsStr.split(/;\s*/).filter(s => s.trim().length > 0);
+      } else if (stepsArr) {
+        steps = stepsArr.match(/"([^"]*)"/g)?.map(s => s.replace(/"/g, '')) || [];
+      } else {
+        steps = [];
+      }
+
       return { summary: JSON.parse(`"${summary}"`), action_steps_explanation: steps };
     }
   } catch (e) { /* continue */ }
@@ -182,7 +223,33 @@ function aggressiveJSONParse(raw) {
 }
 
 /**
- * Resilient AI Response Parser V5.1
+ * V5.3: Normalize flat-schema keys to the canonical internal schema.
+ * Maps "steps" → "action_steps_explanation" and "ref" → "reference_id_highlight".
+ * Also splits semicolon-delimited steps into arrays.
+ */
+function normalizeKeys(parsed) {
+  // Map "steps" → "action_steps_explanation"
+  if (parsed.steps && !parsed.action_steps_explanation) {
+    if (typeof parsed.steps === 'string') {
+      // Split semicolon-delimited steps into an array
+      parsed.action_steps_explanation = parsed.steps.split(/;\s*/).filter(s => s.trim().length > 0);
+    } else if (Array.isArray(parsed.steps)) {
+      parsed.action_steps_explanation = parsed.steps;
+    }
+    delete parsed.steps;
+  }
+
+  // Map "ref" → "reference_id_highlight"
+  if (parsed.ref !== undefined && !parsed.reference_id_highlight) {
+    parsed.reference_id_highlight = parsed.ref;
+    delete parsed.ref;
+  }
+
+  return parsed;
+}
+
+/**
+ * Resilient AI Response Parser V5.3
  * Priority: Aggressive JSON > Deep Clean Rescue > Human-friendly fallback
  * Guarantee: Zero technical leakage to the user.
  */

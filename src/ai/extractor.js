@@ -481,7 +481,12 @@ export function extractFacts(ocrText) {
   } else if (hasFuzzyKeyword(ocrText, ['bescheinigung'])) {
     facts.doc_stage = 'bescheinigung';
   } else if (facts.sender.match(/1&1|Vodafone|Telekom/i)) {
-    facts.doc_stage = (fullTextLower.includes('mobil') || fullTextLower.includes('handy')) ? 'Mobile' : 'Internet';
+    /* V5.3: DSL / Internet keywords take absolute priority over "Mobile".
+     * Telecom invoices often mention "Mobilfunk" in the footer even for
+     * pure DSL contracts. If DSL or Internet appears ANYWHERE, it's Internet. */
+    const hasDSL = fullTextLower.includes('dsl') || fullTextLower.includes('internet') || fullTextLower.includes('breitband') || fullTextLower.includes('glasfaser') || fullTextLower.includes('festnetz');
+    const hasMobile = fullTextLower.includes('mobil') || fullTextLower.includes('handy');
+    facts.doc_stage = hasDSL ? 'Internet' : (hasMobile ? 'Mobile' : 'Internet');
   } else {
     facts.doc_stage = 'other';
   }
