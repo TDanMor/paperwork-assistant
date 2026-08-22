@@ -29,7 +29,7 @@
     "processing_saving": "Se salvează local…",
     "success": "Document procesat!",
     "error_ocr": "Documentul nu a putut fi citit. Încercați o imagine mai clară.",
-    "error_engine": "Analiza a eșuat — salvat doar cu textul extras.",
+    "error_engine": "Analiza a eșuat — documentul nu a fost salvat.",
     "no_model": "Sistemul nu este încărcat. Mergeți la Setări pentru a-l încărca mai întâi.",
     "analyze_another": "Încarcă altul",
     "processing_queue": "Coadă de procesare",

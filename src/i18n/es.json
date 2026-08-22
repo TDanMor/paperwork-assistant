@@ -29,7 +29,7 @@
     "processing_saving": "Guardando en almacenamiento local…",
     "success": "¡Documento procesado!",
     "error_ocr": "No se pudo leer el documento. Intente con una imagen más clara.",
-    "error_engine": "Análisis fallido — guardado solo con texto extraído.",
+    "error_engine": "Análisis fallido — el documento no fue guardado.",
     "no_model": "Sistema no cargado. Vaya a Configuración para cargarlo primero.",
     "analyze_another": "Subir Otro",
     "processing_queue": "Cola de Procesamiento",

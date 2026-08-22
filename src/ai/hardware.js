@@ -62,17 +62,14 @@ export async function detectCapabilityOnce() {
   let profile;
 
   // 3. Decide tier & model
-  // Note: maxBufGB check is sometimes artificially low on certain browsers. 
-  // We use deviceMemory as the primary safety net.
-  // 🛡️ Master Brain V5.4: Force NO_LOCAL if Android GPU limits are too tight (<128MB)
-  if (deviceMemory < 4 || (isAndroid && maxBufMB < 128)) {
+  // 🛡️ Master Brain V5.5: Removed artificial Android GPU buffer limits to support high-end devices like OnePlus 9/10 Pro.
+  // DeviceMemory is the primary safety net.
+  if (deviceMemory < 4) {
     profile = {
       tier: 'NO_LOCAL',
       model: null,
-      reasonKey: (isAndroid && maxBufMB < 128) ? 'reason_gpu_limit' : 'reason_low_ram',
-      reason: (isAndroid && maxBufMB < 128)
-        ? `Android WebGPU limits are too low (${Math.round(maxBufMB)}MB). Local analysis disabled for stability.`
-        : 'RAM is too low (<4GB) for safe local processing.',
+      reasonKey: 'reason_low_ram',
+      reason: 'RAM is too low (<4GB) for safe local processing.',
     };
   } else if (isMobile) {
     // Mobile / tablet ALWAYS gets Lite to prevent VRAM crashes.

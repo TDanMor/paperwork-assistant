@@ -29,7 +29,7 @@
     "processing_saving": "Speichere lokal...",
     "success": "Verarbeitet!",
     "error_ocr": "Dokument unleserlich. Versuchen Sie es mit einem schärferen Bild.",
-    "error_engine": "Analyse fehlgeschlagen — nur extrahierter Text gespeichert.",
+    "error_engine": "Analyse fehlgeschlagen — Dokument wurde nicht gespeichert.",
     "no_model": "System nicht geladen. Gehen Sie zu Einstellungen, um sie zuerst zu laden.",
     "analyze_another": "Weiteres hochladen",
     "processing_queue": "Warteschlange",

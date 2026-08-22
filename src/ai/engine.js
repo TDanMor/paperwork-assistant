@@ -77,18 +77,18 @@ export async function loadModel(progressCallback) {
         progressCallback(Math.round(report.progress * 100), report.text || '');
       }
     },
-    // Lite: 1024 tokens (768 on Android) keeps VRAM under ~600MB total.
-    context_window_size: isLiteModel ? (isAndroid ? 768 : 1024) : 2048,
-    // 🛡️ Master Brain V5.4: Reduce sequence length to cap initial WASM memory allocation
-    max_total_sequence_length: isLiteModel ? (isAndroid ? 768 : 1024) : 2048,
+    // Lite: 1024 tokens keeps VRAM under ~600MB total.
+    context_window_size: isLiteModel ? 1024 : 2048,
+    // 🛡️ Master Brain V5.5: Consistent sequence length and context window
+    max_total_sequence_length: isLiteModel ? 1024 : 2048,
     adapterOpts: { powerPreference: "high-performance" }
   };
 
   // Mobile-specific VRAM safety caps (Lite tier only)
   if (isLiteModel) {
-    engineConfig.gpu_memory_utilization = isAndroid ? 0.4 : 0.6; // Even more conservative on Android
-    engineConfig.max_num_sequence = 1;            // Single sequence — no parallel decoding
-    engineConfig.prefill_chunk_size = isAndroid ? 128 : 256; // Smaller prefill chunks to avoid spikes
+    engineConfig.gpu_memory_utilization = 0.8; // Give Adreno/high-end mobile GPUs breathing room
+    engineConfig.max_num_sequence = 1;         // Single sequence — no parallel decoding
+    engineConfig.prefill_chunk_size = 256;     // Keep prefill chunks uniform across mobile
   }
 
   try {
@@ -106,7 +106,6 @@ export async function loadModel(progressCallback) {
       try {
         console.warn("Retrying with low-power adapter...");
         engineConfig.adapterOpts.powerPreference = "low-power";
-        if (isAndroid) engineConfig.context_window_size = 512; // Absolute minimum
 
         engine = await CreateMLCEngine(activeModelId, engineConfig);
         aiActivated = true;

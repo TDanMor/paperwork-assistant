@@ -29,7 +29,7 @@
     "processing_saving": "Sauvegarde locale...",
     "success": "Document traité !",
     "error_ocr": "Lecture impossible. Essayez une image plus claire.",
-    "error_engine": "Analyse échouée — enregistré avec le texte seul.",
+    "error_engine": "Analyse échouée — le document n'a pas été enregistré.",
     "no_model": "Système non chargé. Allez dans Paramètres pour le charger.",
     "analyze_another": "Ajouter un autre",
     "processing_queue": "File d'attente",

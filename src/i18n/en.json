@@ -29,7 +29,7 @@
     "processing_saving": "Saving to local storage…",
     "success": "Document processed!",
     "error_ocr": "Could not read the document. Try a clearer image.",
-    "error_engine": "Analysis failed — saved with extracted text only.",
+    "error_engine": "Analysis failed — document was not saved.",
     "no_model": "System not loaded. Go to Settings to load it first.",
     "analyze_another": "Upload Another",
     "processing_queue": "Processing Queue",
