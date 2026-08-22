@@ -36,28 +36,43 @@ ${dueDate ? `- Payment Due: ${dueDate}` : ''}
 ${deadline ? `- Legal Deadline to Appeal: ${deadline} (Strict)` : ''}
 ${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
 
-INSTRUCTIONS:
-Write a briefing in ${langName}. Use the VERIFIED FACTS above as your only source for dates and numbers.
-1. "summary": [3 friendly sentences. Mention the sender, the timeframe/dates, and the total amount. If it's a bill, state clearly it's for services.]
-2. "steps": [1-2 concrete actions.]
-3. "ref": [Reference ID or null]
-
 RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
 - NEVER mention an "appointment" unless the Topic explicitly says so.
 - Translate all German meaning into ${langName} immediately.`;
 
+  if (isLite) {
+    // 🪶 LITE STRATEGY: Use strict marker delimiters without any JSON-like quotes.
+    return `${basePrompt}
+
+INSTRUCTIONS:
+You must respond using EXACTLY these three markers, with no extra formatting:
+
+SUMMARY:
+(Write 3 friendly sentences in ${langName} here. Mention the sender and total amount.)
+
+STEPS:
+(Write 1-2 concrete actions in ${langName} here, separated by semicolons.)
+
+REF:
+(Write the reference number here, or null.)`;
+  }
+
   // 💎 PRO STRATEGY: Use full JSON contract.
   return `${basePrompt}
+
 INSTRUCTIONS:
-Respond with a JSON object: {"summary": "...", "steps": "...", "ref": "..."}.
-1. "summary": Detailed narrative explanation in ${langName}.
-2. "steps": Semicolon-separated commands.
-3. "ref": Reference number.
+Respond with a JSON object exactly like this: {"summary": "...", "steps": "...", "ref": "..."}.
+- "summary": Detailed narrative explanation in ${langName}.
+- "steps": Semicolon-separated commands.
+- "ref": Reference number.
 RULES: No markdown, no "json" tags. Translate everything.`;
 }
 
 export function buildUserMessage(ocrText, language, attentionModel) {
+  const langMap = { en: 'English', de: 'German', es: 'Spanish', fr: 'French', ro: 'Romanian' };
+  const langName = langMap[language] || 'English';
+  
   const text = smartSliceOCR(ocrText, 2500, attentionModel.facts);
   const contextBlock = (attentionModel.facts.context_sentences || [])
     .map(s => `- "${s}"`).join('\n');
@@ -69,7 +84,7 @@ ${text}
 KEY SENTENCES:
 ${contextBlock}
 
-Summarize and translate the content above.`;
+Summarize and translate the content above into ${langName}.`;
 }
 
 /**
