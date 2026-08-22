@@ -67,11 +67,7 @@ export default function NavBar() {
           <div className="perf-dropdown-wrapper">
             <div className="perf-trigger" onClick={() => setShowDropdown(!showDropdown)} style={{ cursor: 'pointer' }}>
               <span className="perf-current-title">
-                {activeModelId === MODELS.lite ? '⚡' : '🏆'} 
-                <span className="perf-label-text"> {activeModelId === MODELS.lite ? t('settings.lite_title') : t('settings.pro_title')}</span>
-                <span className="perf-model-name" style={{ display: 'none', fontSize: '0.65rem', marginLeft: '3px' }}>
-                  {activeModelId === MODELS.lite ? 'Qwen' : 'Phi'}
-                </span>
+                {activeModelId === MODELS.lite ? '⚡' : '🏆'} {activeModelId === MODELS.lite ? t('settings.lite_title') : t('settings.pro_title')}
               </span>
             </div>
             <div className="perf-dropdown-menu" style={{ display: showDropdown ? 'block' : '' }}>
