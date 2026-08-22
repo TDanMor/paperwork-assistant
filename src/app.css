@@ -1071,14 +1071,8 @@ button, [role="button"], a, input, select, textarea, label,
     padding: 0.25rem 0.4rem;
     min-width: 0;
   }
-  .perf-label-text {
-    display: none !important;
-  }
-  .perf-model-name {
-    display: inline-block !important;
-  }
   .perf-current-title {
-    font-size: 0.85rem;
+    font-size: 0.75rem; /* Make it smaller so it fits */
   }
   .sentinel-label {
     display: none;

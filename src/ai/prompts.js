@@ -59,7 +59,7 @@ export function buildSystemPrompt(language, attentionModel) {
    * Markdown ban stops ```json leakage on Qwen-0.5B.
    * Storyteller rule prevents raw German echo.
    * ────────────────────────────────────────────────────────────── */
-  return `You are a ${langName} storytelling assistant. NEVER write German sentences in the summary. Translate the intent immediately.
+  return `You are a ${langName} storytelling assistant. NEVER write German sentences in your response. Translate all German text into ${langName} immediately.
 
 VERIFIED FACTS (use these, do not guess):
 - From: ${facts.sender}
