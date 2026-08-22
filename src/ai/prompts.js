@@ -50,37 +50,28 @@ RULES:
 - Translate all German meaning into ${langName} immediately.`;
 
   if (isLite) {
-    // 🪶 LITE STRATEGY: Use strict marker delimiters without any JSON-like quotes.
+    // 🪶 LITE STRATEGY: Few-Shot Pattern (Best for 0.5B models)
     
-    // Explicit String Injection (Instruction Bleed Fix & Role Reversal Fix)
-    let stepsInstruction = `(Write 1-2 concrete actions in ${langName} here, separated by semicolons.)`;
+    let stepsGuidance = '';
     if (facts.is_direct_debit) {
-      stepsInstruction = `(Translate this exact sentence into ${langName}: "No manual payment required. The money will be automatically deducted.")`;
+      stepsGuidance = `\nFor the STEPS section, you MUST translate and use exactly this text: "No manual payment required. The money will be automatically deducted."`;
     } else if (facts.polarity_overall === 'nachzahlung') {
-      stepsInstruction = `(Translate this exact sentence into ${langName}: "Please pay ${amount} manually to ${facts.sender}.")`;
-    }
-
-    const dueString = dueDate ? ` by ${dueDate}` : '';
-    let summaryInstruction = `(Translate this exact sentence into ${langName}: "This is a document from ${facts.sender} regarding your account.")`;
-    if (facts.polarity_overall === 'nachzahlung') {
-      summaryInstruction = `(Translate this exact sentence into ${langName}: "This is an invoice from ${facts.sender}. You need to pay ${amount}${dueString}.")`;
-    } else if (facts.polarity_overall === 'erstattung') {
-      summaryInstruction = `(Translate this exact sentence into ${langName}: "This is a document from ${facts.sender}. You will receive a refund of ${amount}.")`;
+      stepsGuidance = `\nFor the STEPS section, you MUST translate and use exactly this text: "Please pay ${amount} manually to ${facts.sender}."`;
     }
 
     return `${basePrompt}
 
-INSTRUCTIONS:
-You must respond using EXACTLY these three markers, with no extra formatting:
-
+EXAMPLE OF A PERFECT RESPONSE IN ENGLISH:
 SUMMARY:
-${summaryInstruction}
-
+This document is from EnergyCorp. They are informing you about a scheduled water meter replacement on October 12th between 08:00 and 12:00. You need to ensure access to the basement.
 STEPS:
-${stepsInstruction}
-
+Add the appointment to your calendar; Ensure the basement is accessible.
 REF:
-(Write the reference number here, or null.)`;
+499102-B
+
+INSTRUCTIONS FOR THE REAL DOCUMENT:
+Write a similar response in ${langName}. Summarize the actual content of the SOURCE DATA.
+You must use the exact same format (SUMMARY:, STEPS:, REF:).${stepsGuidance}`;
   }
 
   // Direct Debit Armor (For PRO only, as LITE uses explicit string injection)
