@@ -15,34 +15,37 @@ export function buildSystemPrompt(language, attentionModel) {
   const facts = attentionModel.facts;
   const isLite = activeModelId === MODELS.lite;
 
-  // 🛡️ Master Brain V5.6: Enhanced Fact Extraction for Prompt Injection
+  // 🛡️ Master Brain V5.7: Opus-Level Fact Injection
   const amount = facts.amounts[0]?.value ? `${facts.amounts[0].value} EUR` : 'N/A';
   const dueDate = facts.dates.find(d => d.role === 'due')?.value;
+  const deadline = facts.legal_remedy?.deadline;
   const servicePeriod = facts.service_period ? `from ${facts.service_period.start} to ${facts.service_period.end}` : null;
 
-  const basePrompt = `THINK AND WRITE ONLY IN ${langName.toUpperCase()}.
-You are a helpful assistant explaining a German document.
-VERIFIED FACTS:
-- From: ${facts.sender}
-- Topic: ${facts.document_topic || 'General Correspondence'}
-- Amount: ${amount}${dueDate ? `\n- Due Date: ${dueDate}` : ''}${servicePeriod ? `\n- Service Period: ${servicePeriod}` : ''}`;
+  // Dictionary guard to prevent terminology hallucinations (e.g. "Viertelsteuer")
+  const vatTerms = { en: 'VAT', de: 'MwSt', es: 'IVA', fr: 'TVA', ro: 'TVA' };
+  const vatLabel = vatTerms[language] || 'Tax';
 
-  if (isLite) {
-    // 🛡️ LITE STRATEGY: Marker-Delimited Text with stricter hallucination guards
-    return `${basePrompt}
+  const basePrompt = `THINK AND WRITE ONLY IN ${langName.toUpperCase()}.
+You are a professional administrative assistant. Explain this document to a ${langName} speaker.
+
+VERIFIED FACTS (Immutable):
+- Sender: ${facts.sender}
+- Topic: ${facts.document_topic || 'Correspondence'}
+- Amount: ${amount} (${vatLabel} included)
+${dueDate ? `- Payment Due: ${dueDate}` : ''}
+${deadline ? `- Legal Deadline to Appeal: ${deadline} (Strict)` : ''}
+${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
 
 INSTRUCTIONS:
-Write a simple briefing in ${langName} using these exact markers:
-SUMMARY: [3 natural sentences. Explain the purpose and timeframe. Translate terms like "VAT" correctly.]
-STEPS: [Short commands: Pay the bill; File away]
-REF: [Reference number or None]
+Write a briefing in ${langName}. Use the VERIFIED FACTS above as your only source for dates and numbers.
+1. "summary": [3 friendly sentences. Mention the sender, the timeframe/dates, and the total amount. If it's a bill, state clearly it's for services.]
+2. "steps": [1-2 concrete actions.]
+3. "ref": [Reference ID or null]
 
 RULES:
-- NEVER invent new dates or terms (e.g. do NOT say "Viertelsteuer").
-- If the Topic does NOT mention an "appointment", do NOT mention one in the summary.
-- NEVER use German unless ${langName} is German.
-- Start immediately with SUMMARY:`;
-  }
+- NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
+- NEVER mention an "appointment" unless the Topic explicitly says so.
+- Translate all German meaning into ${langName} immediately.`;
 
   // 💎 PRO STRATEGY: Use full JSON contract.
   return `${basePrompt}
