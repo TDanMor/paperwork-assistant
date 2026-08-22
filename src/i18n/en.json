@@ -228,7 +228,10 @@
     "step_3_desc": "After the browser restarts, return to the application.",
     "checking": "Checking system capability...",
     "error": "Hardware detection error",
-    "mobile_limitation": "Your current browser or device does not support advanced hardware acceleration."
+    "mobile_limitation": "Your current browser or device does not support advanced hardware acceleration.",
+    "popup_error_title": "Engine Not Ready",
+    "popup_error_desc": "The local AI engine failed to initialize. Advanced features will not work. Reason: ",
+    "popup_close": "Close"
   },
   "months": {
     "jan": "January",

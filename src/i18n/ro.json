@@ -211,7 +211,10 @@
     "step_3_desc": "După repornirea browserului, reveniți la aplicație.",
     "checking": "Se verifică capacitatea sistemului...",
     "error": "Eroare detectare hardware",
-    "mobile_limitation": "Dispozitivul dvs. nu acceptă accelerarea hardware avansată."
+    "mobile_limitation": "Dispozitivul dvs. nu acceptă accelerarea hardware avansată.",
+    "popup_error_title": "Motorul nu este pregătit",
+    "popup_error_desc": "Motorul local AI nu a putut fi inițializat. Funcțiile avansate nu vor funcționa. Motiv: ",
+    "popup_close": "Închide"
   },
   "months": {
     "jan": "Ianuarie",

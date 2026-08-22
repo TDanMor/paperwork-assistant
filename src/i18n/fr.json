@@ -226,7 +226,10 @@
     "step_3_desc": "Revenez ici.",
     "checking": "Vérification du système...",
     "error": "Erreur de détection matérielle",
-    "mobile_limitation": "Votre appareil ne supporte pas l'accélération matérielle avancée."
+    "mobile_limitation": "Votre appareil ne supporte pas l'accélération matérielle avancée.",
+    "popup_error_title": "Moteur non prêt",
+    "popup_error_desc": "Le moteur d'IA local n'a pas pu s'initialiser. Les fonctionnalités avancées ne fonctionneront pas. Raison : ",
+    "popup_close": "Fermer"
   },
   "months": {
     "jan": "Janvier",

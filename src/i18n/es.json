@@ -227,7 +227,10 @@
     "step_3_desc": "Tras reiniciar el navegador, vuelva a la aplicación.",
     "checking": "Comprobando capacidad del sistema...",
     "error": "Error de detección de hardware",
-    "mobile_limitation": "Su navegador o dispositivo actual no admite aceleración de hardware avanzada."
+    "mobile_limitation": "Su navegador o dispositivo actual no admite aceleración de hardware avanzada.",
+    "popup_error_title": "Motor no listo",
+    "popup_error_desc": "El motor de IA local no pudo inicializarse. Las funciones avanzadas no funcionarán. Razón: ",
+    "popup_close": "Cerrar"
   },
   "months": {
     "jan": "Enero",

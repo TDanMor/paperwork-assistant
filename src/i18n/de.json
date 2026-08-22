@@ -228,7 +228,10 @@
     "step_3_desc": "Kehren Sie nach dem Neustart des Browsers zur Anwendung zurück.",
     "checking": "Systemfähigkeit wird geprüft...",
     "error": "Hardware-Erkennungsfehler",
-    "mobile_limitation": "Ihr aktueller Browser oder Ihr Gerät unterstützt keine erweiterte Hardwarebeschleunigung."
+    "mobile_limitation": "Ihr aktueller Browser oder Ihr Gerät unterstützt keine erweiterte Hardwarebeschleunigung.",
+    "popup_error_title": "Engine nicht bereit",
+    "popup_error_desc": "Die lokale KI-Engine konnte nicht initialisiert werden. Erweiterte Funktionen sind nicht verfügbar. Grund: ",
+    "popup_close": "Schließen"
   },
   "months": {
     "jan": "Januar",
