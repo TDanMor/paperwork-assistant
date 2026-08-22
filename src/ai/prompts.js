@@ -15,24 +15,33 @@ export function buildSystemPrompt(language, attentionModel) {
   const facts = attentionModel.facts;
   const isLite = activeModelId === MODELS.lite;
 
+  // 🛡️ Master Brain V5.6: Enhanced Fact Extraction for Prompt Injection
+  const amount = facts.amounts[0]?.value ? `${facts.amounts[0].value} EUR` : 'N/A';
+  const dueDate = facts.dates.find(d => d.role === 'due')?.value;
+  const servicePeriod = facts.service_period ? `from ${facts.service_period.start} to ${facts.service_period.end}` : null;
+
   const basePrompt = `THINK AND WRITE ONLY IN ${langName.toUpperCase()}.
 You are a helpful assistant explaining a German document.
-VERIFIED FACTS: From ${facts.sender}, Topic is ${facts.document_topic || 'Correspondence'}, Amount is ${facts.amounts[0]?.value || 'N/A'}.`;
+VERIFIED FACTS:
+- From: ${facts.sender}
+- Topic: ${facts.document_topic || 'General Correspondence'}
+- Amount: ${amount}${dueDate ? `\n- Due Date: ${dueDate}` : ''}${servicePeriod ? `\n- Service Period: ${servicePeriod}` : ''}`;
 
   if (isLite) {
-    // 🛡️ LITE STRATEGY: Use simple markers, not JSON.
+    // 🛡️ LITE STRATEGY: Marker-Delimited Text with stricter hallucination guards
     return `${basePrompt}
 
 INSTRUCTIONS:
 Write a simple briefing in ${langName} using these exact markers:
-SUMMARY: [3 natural sentences explaining what this is and why. Translate everything.]
-STEPS: [Short commands like: Pay the bill; File away]
+SUMMARY: [3 natural sentences. Explain the purpose and timeframe. Translate terms like "VAT" correctly.]
+STEPS: [Short commands: Pay the bill; File away]
 REF: [Reference number or None]
 
 RULES:
-- Start immediately with SUMMARY:
+- NEVER invent new dates or terms (e.g. do NOT say "Viertelsteuer").
+- If the Topic does NOT mention an "appointment", do NOT mention one in the summary.
 - NEVER use German unless ${langName} is German.
-- Be concise and professional.`;
+- Start immediately with SUMMARY:`;
   }
 
   // 💎 PRO STRATEGY: Use full JSON contract.

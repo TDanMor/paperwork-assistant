@@ -328,13 +328,13 @@ export function extractFacts(ocrText) {
   }
 
   // --- CONTEXT SENTENCE HARVESTER ---
-  // Captures the full sentence around key intent phrases so the AI can tell the story
   const intentAnchors = [
     { key: 'provide_bank_details', regex: /bankverbindung|kontoverbindung|iban mitteilen|kontodaten/gi },
     { key: 'pickup_instructions', regex: /abholort|abholtermin|bereitstellung|abholung|abholen/gi },
     { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
     { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
-    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|melden sie sich/gi },
+    // 🛡️ Master Brain V5.6: Tightened appointment regex to avoid 'Melden Sie sich an' (Login) triggers
+    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|erscheinen sie bitte/gi },
     { key: 'return_documents', regex: /unterlagen.*(senden|einreichen|zurück)|formular.*(zurück|einreichen)|bitte.*senden.*sie|nach abschluss der behandlung/gi }
   ];
 
@@ -526,6 +526,13 @@ export function extractFacts(ocrText) {
   // --- DATES & TIMES ---
   const dateRegex = /\b([0-3]?\d)\.([0-1]?\d)\.(\d{2,4})\b/g;
   const timeRegex = /\b([01]?\d|2[0-3])[:.][0-5]\d\b/g;
+
+  // 🛡️ Master Brain V5.6: Extract Service Period (Abrechnungszeitraum)
+  const periodMatch = ocrText.match(/(?:zeitraum|periode|abrechnung vom|abrechnung[:\s]+)(\d{2}\.\d{2}\.\d{2,4})\s*(?:bis|bis zum|-)\s*(\d{2}\.\d{2}\.\d{2,4})/i);
+  if (periodMatch) {
+    facts.service_period = { start: periodMatch[1], end: periodMatch[2] };
+  }
+
   let dMatch;
   while ((dMatch = dateRegex.exec(ocrText)) !== null) {
     const window = ocrText.slice(Math.max(0, dMatch.index - 120), Math.min(ocrText.length, dMatch.index + 120));
