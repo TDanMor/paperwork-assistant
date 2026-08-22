@@ -570,7 +570,16 @@ export function extractFacts(ocrText) {
       }
   }
 
-  if (hasFuzzyKeyword(ocrText, ['termin', 'einladung'])) facts.actions.push({ key: 'attend', priority: 1, reason: 'Appointment detected' });
+  if (hasFuzzyKeyword(ocrText, ['termin', 'einladung'])) {
+    // 🛡️ Master Brain V5.5: Suppression Rule
+    // Avoid false 'Appointments' on invoices unless an explicit time is found.
+    const hasTime = /([01]?\d|2[0-3])[:.][0-5]\d/.test(ocrText);
+    const isUtilityInvoice = facts.polarity_overall === 'nachzahlung' && facts.nuances.includes('Utility');
+
+    if (!isUtilityInvoice || hasTime) {
+      facts.actions.push({ key: 'attend', priority: 1, reason: 'Appointment detected' });
+    }
+  }
   if (facts.special_intent && facts.special_intent.includes('return_documents')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Document submission requested' });
 
   return facts;
