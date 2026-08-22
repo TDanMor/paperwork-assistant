@@ -21,20 +21,12 @@ export function buildSystemPrompt(language, attentionModel) {
   const deadline = facts.legal_remedy?.deadline;
   const servicePeriod = facts.service_period ? `from ${facts.service_period.start} to ${facts.service_period.end}` : null;
 
-  // Direction Guard (Role Reversal Fix)
+  // Direction Guard (Role Reversal Fix - Pronouns Removed)
   let relationship = '';
   if (facts.polarity_overall === 'nachzahlung') {
-    relationship = `\n- Relationship: YOU owe money to ${facts.sender}.`;
+    relationship = `\n- Fact: The recipient of this document owes ${amount} to ${facts.sender}.`;
   } else if (facts.polarity_overall === 'erstattung') {
-    relationship = `\n- Relationship: ${facts.sender} owes YOU money.`;
-  }
-
-  // Direct Debit Armor
-  let paymentRule = '';
-  if (facts.is_direct_debit) {
-    paymentRule = `\n- MANDATORY RULE: This invoice is paid via Direct Debit (Lastschrift). The user does NOT need to transfer money manually. Tell them it will be deducted automatically.`;
-  } else if (facts.polarity_overall === 'nachzahlung') {
-    paymentRule = `\n- MANDATORY RULE: Tell the user they need to pay the amount manually.`;
+    relationship = `\n- Fact: ${facts.sender} owes money to the recipient of this document.`;
   }
 
   // Dictionary guard to prevent terminology hallucinations (e.g. "Viertelsteuer")
@@ -54,11 +46,20 @@ ${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
 
 RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
-- NEVER mention an "appointment" unless the Topic explicitly says so.${paymentRule}
+- NEVER mention an "appointment" unless the Topic explicitly says so.
 - Translate all German meaning into ${langName} immediately.`;
 
   if (isLite) {
     // 🪶 LITE STRATEGY: Use strict marker delimiters without any JSON-like quotes.
+    
+    // Explicit String Injection (Instruction Bleed Fix)
+    let stepsInstruction = `(Write 1-2 concrete actions in ${langName} here, separated by semicolons.)`;
+    if (facts.is_direct_debit) {
+      stepsInstruction = `(Translate this exact sentence into ${langName}: "No manual payment required. The money will be automatically deducted.")`;
+    } else if (facts.polarity_overall === 'nachzahlung') {
+      stepsInstruction = `(Translate this exact sentence into ${langName}: "Please pay ${amount} manually to ${facts.sender}.")`;
+    }
+
     return `${basePrompt}
 
 INSTRUCTIONS:
@@ -68,14 +69,22 @@ SUMMARY:
 (Write 3 friendly sentences in ${langName} here. Mention the sender and total amount.)
 
 STEPS:
-(List the exact actions the user must take in ${langName}. If Direct Debit is active, tell them no manual payment is needed. Do NOT write meta-instructions like 'Calculate'. Separate actions by semicolons.)
+${stepsInstruction}
 
 REF:
 (Write the reference number here, or null.)`;
   }
 
+  // Direct Debit Armor (For PRO only, as LITE uses explicit string injection)
+  let proPaymentRule = '';
+  if (facts.is_direct_debit) {
+    proPaymentRule = `\n- MANDATORY RULE: This invoice is paid via Direct Debit (Lastschrift). The user does NOT need to transfer money manually. Tell them it will be deducted automatically.`;
+  } else if (facts.polarity_overall === 'nachzahlung') {
+    proPaymentRule = `\n- MANDATORY RULE: Tell the user they need to pay the amount manually.`;
+  }
+
   // 💎 PRO STRATEGY: Use full JSON contract.
-  return `${basePrompt}
+  return `${basePrompt}${proPaymentRule}
 
 INSTRUCTIONS:
 Respond with a JSON object exactly like this: {"summary": "...", "steps": "...", "ref": "..."}.
