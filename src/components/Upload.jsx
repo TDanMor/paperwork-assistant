@@ -78,7 +78,13 @@ export default function Upload() {
             wasAiSuccess = true;
             break;
           } catch (aiErr) {
-            console.error(`AI Attempt ${retryCount + 1} failed:`, aiErr);
+            // 🛡️ Master Brain V5.4: Verbose logging for GPU troubleshooting
+            console.error(`AI Attempt ${retryCount + 1} Failed:`, {
+              message: aiErr.message,
+              stack: aiErr.stack,
+              isEngineLoaded: isModelLoaded()
+            });
+
             if (!isModelLoaded()) {
               dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset. Recovering...' });
               await new Promise(r => setTimeout(r, 3000));
@@ -89,8 +95,12 @@ export default function Upload() {
           }
         }
 
+        // 🛡️ Master Brain V5.4: Resilience - If AI fails, proceed with Deterministic results only
         if (!wasAiSuccess) {
-          throw new Error(t('upload.badge_unavailable'));
+          console.warn("AI Analysis unavailable after retries. Falling back to deterministic extractors.");
+          const attentionModel = buildAttentionModel(ocrText, state.documents);
+          aiData = parseAIResponse(null, attentionModel);
+          updateItem(item.id, { aiFailed: true }); // Marks the badge as 'Analysis Unavailable' but keeps the doc
         }
 
         // Step 3: Saving

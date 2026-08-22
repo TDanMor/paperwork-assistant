@@ -30,6 +30,9 @@ let isProcessing = false;
 let isResetting = false;
 let lastTaskResetDone = true;
 
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+const isAndroid = /Android/i.test(navigator.userAgent);
+
 /**
  * Run once on boot to detect capability and assign the correct model.
  */
@@ -74,24 +77,45 @@ export async function loadModel(progressCallback) {
         progressCallback(Math.round(report.progress * 100), report.text || '');
       }
     },
-    // Lite: 1024 tokens keeps VRAM under ~600MB total.
-    // Pro:  2048 tokens for full structured output quality.
-    context_window_size: isLiteModel ? 1024 : 2048,
+    // Lite: 1024 tokens (768 on Android) keeps VRAM under ~600MB total.
+    context_window_size: isLiteModel ? (isAndroid ? 768 : 1024) : 2048,
+    // 🛡️ Master Brain V5.4: Reduce sequence length to cap initial WASM memory allocation
+    max_total_sequence_length: isLiteModel ? (isAndroid ? 768 : 1024) : 2048,
     adapterOpts: { powerPreference: "high-performance" }
   };
 
   // Mobile-specific VRAM safety caps (Lite tier only)
   if (isLiteModel) {
-    engineConfig.gpu_memory_utilization = 0.6;   // Reserve 40% VRAM for OS/browser
+    engineConfig.gpu_memory_utilization = isAndroid ? 0.4 : 0.6; // Even more conservative on Android
     engineConfig.max_num_sequence = 1;            // Single sequence — no parallel decoding
-    engineConfig.prefill_chunk_size = 256;        // Smaller prefill chunks to avoid spikes
+    engineConfig.prefill_chunk_size = isAndroid ? 128 : 256; // Smaller prefill chunks to avoid spikes
   }
 
   try {
     engine = await CreateMLCEngine(activeModelId, engineConfig);
     aiActivated = true; 
   } catch (err) {
-    console.error("Failed to load model:", err);
+    console.error("Primary GPU Load Failed:", {
+      error: err.message,
+      model: activeModelId,
+      config: engineConfig
+    });
+
+    // 🛡️ Master Brain V5.4: Android/Mobile Resilience - Retry with low-power adapter
+    if (isMobile) {
+      try {
+        console.warn("Retrying with low-power adapter...");
+        engineConfig.adapterOpts.powerPreference = "low-power";
+        if (isAndroid) engineConfig.context_window_size = 512; // Absolute minimum
+
+        engine = await CreateMLCEngine(activeModelId, engineConfig);
+        aiActivated = true;
+        return;
+      } catch (retryErr) {
+        console.error("Critical Engine Failure (Fallback also failed):", retryErr);
+      }
+    }
+
     engine = null;
     aiActivated = false;
     throw err;
@@ -178,13 +202,19 @@ export async function chat(systemPrompt, userMessage) {
     return content;
   } catch (err) {
     lastTaskResetDone = false; // Flag as dirty on error
-    console.error("GPU Engine Error:", err);
+    console.error("GPU Inference Error:", {
+      message: err.message,
+      stack: err.stack,
+      model: activeModelId
+    });
 
     const isFatal =
       err.message.includes("disposed") ||
       err.message.includes("lost") ||
       err.message.includes("Device was lost") ||
-      err.message.includes("should not be 0");
+      err.message.includes("should not be 0") ||
+      err.message.includes("Buffer length exceeded") ||
+      err.message.includes("Out of memory");
 
     if (isFatal) {
       try { await engine.unload(); } catch (e) {}

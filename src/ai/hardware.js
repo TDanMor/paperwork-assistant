@@ -51,23 +51,28 @@ export async function detectCapabilityOnce() {
 
   const limits = adapter.limits;
   const maxBuf = limits.maxStorageBufferBindingSize || 0; // bytes
+  const maxBufMB = maxBuf / (1024 * 1024);
   const maxBufGB = maxBuf / (1024 ** 3);
   
   // navigator.deviceMemory is undefined on Safari. Default to 8GB heuristic if missing.
   const deviceMemory = navigator.deviceMemory || 8; 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
+  const isAndroid = /Android/i.test(navigator.userAgent);
+
   let profile;
 
   // 3. Decide tier & model
   // Note: maxBufGB check is sometimes artificially low on certain browsers. 
   // We use deviceMemory as the primary safety net.
-  if (deviceMemory < 4) {
+  // 🛡️ Master Brain V5.4: Force NO_LOCAL if Android GPU limits are too tight (<128MB)
+  if (deviceMemory < 4 || (isAndroid && maxBufMB < 128)) {
     profile = {
       tier: 'NO_LOCAL',
       model: null,
-      reasonKey: 'reason_low_ram',
-      reason: 'RAM is too low (<4GB) for safe local processing.',
+      reasonKey: (isAndroid && maxBufMB < 128) ? 'reason_gpu_limit' : 'reason_low_ram',
+      reason: (isAndroid && maxBufMB < 128)
+        ? `Android WebGPU limits are too low (${Math.round(maxBufMB)}MB). Local analysis disabled for stability.`
+        : 'RAM is too low (<4GB) for safe local processing.',
     };
   } else if (isMobile) {
     // Mobile / tablet ALWAYS gets Lite to prevent VRAM crashes.
