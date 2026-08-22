@@ -95,12 +95,9 @@ export default function Upload() {
           }
         }
 
-        // 🛡️ Master Brain V5.4: Resilience - If AI fails, proceed with Deterministic results only
+        // 🛡️ Master Brain V5.4: Strict Quality Gate - If AI fails, do NOT save the document.
         if (!wasAiSuccess) {
-          console.warn("AI Analysis unavailable after retries. Falling back to deterministic extractors.");
-          const attentionModel = buildAttentionModel(ocrText, state.documents);
-          aiData = parseAIResponse(null, attentionModel);
-          updateItem(item.id, { aiFailed: true }); // Marks the badge as 'Analysis Unavailable' but keeps the doc
+          throw new Error(t('upload.error_engine'));
         }
 
         // Step 3: Saving
