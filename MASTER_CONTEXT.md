@@ -12,7 +12,7 @@ Live Deployment: [https://paperworkassistant.pages.dev/](https://paperworkassist
 - **Storage Layer**: IndexedDB (`idb`) for local persistence of documents, binary file blobs, OCR text, and user settings.
 - **Security & Vault**: Web Crypto API (PBKDF2 with 600,000 iterations + AES-GCM 256-bit) with session-only volatile key caching.
 - **Deterministic Harvester (`src/ai/extractor.js`)**: Pure JavaScript parser extracting validated math facts, German institutional IDs (Steuernummer, RV-Nummer, BG-Nummer), legal appeal deadlines (§ 193 BGB weekend shifts & post-2025 4-day delivery fictions), and high-severity threat keywords (*Pfändung*, *Sanktion*, *Vollstreckung*).
-- **Hardware Profiler (`src/ai/hardware.js`)**: Evaluates `navigator.gpu` maximum buffer sizes and `deviceMemory` on first load to intelligently lock the device into PRO (Phi-3.5), LITE (Qwen 1.5B), or NO_LOCAL (pure deterministic fallback) to prevent browser VRAM crashes.
+- **Hardware Profiler (`src/ai/hardware.js`)**: Evaluates `navigator.gpu` maximum buffer sizes and `deviceMemory` on first load to intelligently lock the device into PRO (Phi-3.5), LITE/Ultra-Stable (Qwen-0.5B), or NO_LOCAL (pure deterministic fallback) to prevent browser VRAM crashes.
 - **Inference Engine (`src/ai/engine.js` & `src/ai/prompts.js`)**: Browser-based local inference capped at a `context_window_size: 2048` token limit and MAX_CHARS = 2500 input budget to prevent consumer GPU VRAM exhaustion (`DXGI_ERROR_DEVICE_HUNG`).
 - **UI Components (`src/components/`)**:
   - `Dashboard.jsx`: Urgency-grouped task cards and action items.
