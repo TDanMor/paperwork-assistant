@@ -1018,7 +1018,12 @@ button, [role="button"], a, input, select, textarea, label,
 
 /* Very small phones — 400px and below */
 @media (max-width: 400px) {
-  .navbar-brand-info { display: none; }
+  .navbar-brand-info {
+    display: flex;
+  }
+  .navbar-brand-text {
+    display: none; /* Hide 'Paperwork Assistant' name but KEEP the version label below */
+  }
   .nav-btn { padding: 0.45rem 0.5rem 0.4rem; min-width: 44px; }
   .nav-label { display: none; }   /* icon-only on tiny screens */
   .tile-grid { gap: 0.75rem; }
