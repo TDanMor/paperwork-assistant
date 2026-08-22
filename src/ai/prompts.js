@@ -21,6 +21,22 @@ export function buildSystemPrompt(language, attentionModel) {
   const deadline = facts.legal_remedy?.deadline;
   const servicePeriod = facts.service_period ? `from ${facts.service_period.start} to ${facts.service_period.end}` : null;
 
+  // Direction Guard (Role Reversal Fix)
+  let relationship = '';
+  if (facts.polarity_overall === 'nachzahlung') {
+    relationship = `\n- Relationship: YOU owe money to ${facts.sender}.`;
+  } else if (facts.polarity_overall === 'erstattung') {
+    relationship = `\n- Relationship: ${facts.sender} owes YOU money.`;
+  }
+
+  // Direct Debit Armor
+  let paymentRule = '';
+  if (facts.is_direct_debit) {
+    paymentRule = `\n- MANDATORY RULE: This invoice is paid via Direct Debit (Lastschrift). The user does NOT need to transfer money manually. Tell them it will be deducted automatically.`;
+  } else if (facts.polarity_overall === 'nachzahlung') {
+    paymentRule = `\n- MANDATORY RULE: Tell the user they need to pay the amount manually.`;
+  }
+
   // Dictionary guard to prevent terminology hallucinations (e.g. "Viertelsteuer")
   const vatTerms = { en: 'VAT', de: 'MwSt', es: 'IVA', fr: 'TVA', ro: 'TVA' };
   const vatLabel = vatTerms[language] || 'Tax';
@@ -31,14 +47,14 @@ You are a professional administrative assistant. Explain this document to a ${la
 VERIFIED FACTS (Immutable):
 - Sender: ${facts.sender}
 - Topic: ${facts.document_topic || 'Correspondence'}
-- Amount: ${amount} (${vatLabel} included)
+- Amount: ${amount} (${vatLabel} included)${relationship}
 ${dueDate ? `- Payment Due: ${dueDate}` : ''}
 ${deadline ? `- Legal Deadline to Appeal: ${deadline} (Strict)` : ''}
 ${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
 
 RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
-- NEVER mention an "appointment" unless the Topic explicitly says so.
+- NEVER mention an "appointment" unless the Topic explicitly says so.${paymentRule}
 - Translate all German meaning into ${langName} immediately.`;
 
   if (isLite) {
@@ -52,7 +68,7 @@ SUMMARY:
 (Write 3 friendly sentences in ${langName} here. Mention the sender and total amount.)
 
 STEPS:
-(Write 1-2 concrete actions in ${langName} here, separated by semicolons.)
+(List the exact actions the user must take in ${langName}. If Direct Debit is active, tell them no manual payment is needed. Do NOT write meta-instructions like 'Calculate'. Separate actions by semicolons.)
 
 REF:
 (Write the reference number here, or null.)`;
