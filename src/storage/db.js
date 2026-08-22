@@ -1,15 +1,57 @@
 ﻿import { openDB } from 'idb';
-import { encryptData, decryptData, decryptToBytes } from '../utils/crypto.js';
+import { encryptData, decryptData, decryptToBytes, base64ToBytes, bytesToBase64 } from '../utils/crypto.js';
 
 const DB_NAME    = 'paperwork-assistant';
 const DB_VERSION = 2;
 const STORE      = 'documents';
 const META_STORE = 'vault_meta';
+const SESSION_KEY_STORAGE = 'pa_session_key';
 
 let sessionKey = null;
 
-export function setSessionKey(key) { sessionKey = key; }
 export function isVaultLocked() { return sessionKey === null; }
+
+/**
+ * Sets the session key in memory and optionally persists it to sessionStorage
+ * to allow it to survive page refreshes while remaining tab-bound.
+ */
+export async function setSessionKey(key) {
+  sessionKey = key;
+  if (key) {
+    try {
+      const exported = await crypto.subtle.exportKey('raw', key);
+      sessionStorage.setItem(SESSION_KEY_STORAGE, bytesToBase64(new Uint8Array(exported)));
+    } catch (e) {
+      console.error("Failed to export session key for resilience:", e);
+    }
+  } else {
+    sessionStorage.removeItem(SESSION_KEY_STORAGE);
+  }
+}
+
+/**
+ * Attempts to restore the session key from sessionStorage.
+ */
+export async function tryRestoreSession() {
+  const stored = sessionStorage.getItem(SESSION_KEY_STORAGE);
+  if (stored) {
+    try {
+      const keyBytes = base64ToBytes(stored);
+      sessionKey = await crypto.subtle.importKey(
+        'raw',
+        keyBytes,
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['encrypt', 'decrypt']
+      );
+      return true;
+    } catch (e) {
+      console.error("Failed to restore session key:", e);
+      sessionStorage.removeItem(SESSION_KEY_STORAGE);
+    }
+  }
+  return false;
+}
 
 async function getDB() {
   return openDB(DB_NAME, DB_VERSION, {

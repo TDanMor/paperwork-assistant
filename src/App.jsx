@@ -15,14 +15,14 @@ import VaultLock       from './components/VaultLock.jsx';
 import InstallBanner   from './components/InstallBanner.jsx';
 import Onboarding      from './components/Onboarding.jsx';
 import { hasCachedProfile } from './ai/hardware.js';
-import { getAllDocuments, setSessionKey } from './storage/db.js';
+import { getAllDocuments, setSessionKey, tryRestoreSession } from './storage/db.js';
 import { setLanguage }    from './i18n/index.js';
 import { initializeHardware, activeHardwareProfile } from './ai/engine.js';
 
 // ---------- Context (shared with all child components) ----------
 export const AppContext = createContext(null);
 
-const LOCK_AFTER_MS = 15 * 60 * 1000; // 15 Minutes
+const LOCK_AFTER_MS = 30 * 60 * 1000; // Increased to 30 Minutes for better UX
 
 // ---------- Initial state ----------
 const initialState = {
@@ -97,19 +97,37 @@ export default function App() {
     if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
 
     lockTimerRef.current = setTimeout(() => {
-      setSessionKey(null); // Wipe key from memory
+      setSessionKey(null); // Wipe key from memory and sessionStorage
       dispatch({ type: 'SET_VAULT_LOCKED', payload: true });
     }, LOCK_AFTER_MS);
   }, [state.isVaultLocked]);
 
+  // 🔐 SESSION RESTORATION (Survives Refresh)
   useEffect(() => {
-    window.addEventListener('mousemove', resetLockTimer);
-    window.addEventListener('keydown', resetLockTimer);
-    resetLockTimer(); // Start timer on mount
+    tryRestoreSession().then(restored => {
+      if (restored) {
+        dispatch({ type: 'SET_VAULT_LOCKED', payload: false });
+        getAllDocuments().then(docs => dispatch({ type: 'SET_DOCUMENTS', documents: docs }));
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleActivity = () => resetLockTimer();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') resetLockTimer();
+    };
+
+    window.addEventListener('mousemove', handleActivity);
+    window.addEventListener('keydown', handleActivity);
+    window.addEventListener('visibilitychange', handleVisibility);
+
+    resetLockTimer(); // Start/Reset timer on mount or state change
 
     return () => {
-      window.removeEventListener('mousemove', resetLockTimer);
-      window.removeEventListener('keydown', resetLockTimer);
+      window.removeEventListener('mousemove', handleActivity);
+      window.removeEventListener('keydown', handleActivity);
+      window.removeEventListener('visibilitychange', handleVisibility);
       if (lockTimerRef.current) clearTimeout(lockTimerRef.current);
     };
   }, [resetLockTimer]);

@@ -32,8 +32,8 @@ export default function VaultLock() {
         return;
       }
 
-      // 4. Store key in volatile memory
-      setSessionKey(key);
+      // 4. Store key in memory and sessionStorage
+      await setSessionKey(key);
 
       // 5. Unlock UI
       dispatch({ type: 'SET_VAULT_LOCKED', payload: false });
