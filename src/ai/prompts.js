@@ -113,9 +113,9 @@ Summarize and translate the content above into ${langName}.`;
  * Opus-Level Rescue Parser
  * Handles both the JSON response (Pro) and the Delimited Text (Lite).
  */
-export function parseAIResponse(raw, attentionModel) {
+export function parseAIResponse(raw, attentionModel, language = 'en') {
   console.log("Opus-Level Raw Response:", raw);
-  if (!raw || raw.trim().length < 5) return buildFallback(attentionModel.facts);
+  if (!raw || raw.trim().length < 5) return getFallbackData(attentionModel.facts, language);
 
   let summary = null;
   let steps = [];
@@ -150,7 +150,7 @@ export function parseAIResponse(raw, attentionModel) {
   return {
     sender: attentionModel.facts.sender,
     summary: finalSummary,
-    action_steps: (steps && steps.length > 0) ? steps : attentionModel.facts.actions.map(a => a.reason),
+    action_steps: (steps && steps.length > 0) ? steps : attentionModel.facts.actions.map(a => getLocalizedAction(a, language)),
     document_type: attentionModel.facts.polarity_overall === 'nachzahlung' ? 'invoice' : 'notice',
     main_category: attentionModel.facts.nuances[0] || 'Finance',
     sub_category: attentionModel.facts.doc_stage,
@@ -179,13 +179,34 @@ function deepClean(text, sender) {
     .trim();
 }
 
-function buildFallback(facts) {
-  return {
-    sender: facts.sender,
-    summary: `New document from ${facts.sender}. Please check details below.`,
-    action_steps: facts.actions.map(a => a.reason),
-    // ... other fields default ...
-  };
+function getLocalizedFallbackMessage(facts, language) {
+  const amount = facts.amounts[0]?.value ? `${facts.amounts[0].value} EUR` : '';
+  const sender = facts.sender !== 'Unknown' ? facts.sender : '';
+  
+  if (language === 'de') return `Neues Dokument${sender ? ` von ${sender}` : ''}${amount ? ` über ${amount}` : ''}. Lokale KI-Verarbeitung derzeit nicht verfügbar.`;
+  if (language === 'es') return `Nuevo documento${sender ? ` de ${sender}` : ''}${amount ? ` por ${amount}` : ''}. Procesamiento local de IA no disponible.`;
+  if (language === 'fr') return `Nouveau document${sender ? ` de ${sender}` : ''}${amount ? ` de ${amount}` : ''}. Traitement local de l'IA indisponible.`;
+  if (language === 'ro') return `Document nou${sender ? ` de la ${sender}` : ''}${amount ? ` pentru ${amount}` : ''}. Procesarea locală AI indisponibilă.`;
+  return `New document${sender ? ` from ${sender}` : ''}${amount ? ` for ${amount}` : ''}. Local AI processing currently unavailable.`;
+}
+
+function getLocalizedAction(action, language) {
+  if (language === 'de') {
+    if (action.key === 'pay') return 'Zahlung erforderlich';
+    if (action.key === 'file') return 'Zur Aufbewahrung';
+    if (action.key === 'attend') return 'Termin beachten';
+    if (action.key === 'critical') return 'Wichtig: Sofort prüfen';
+    return 'Bitte prüfen';
+  }
+  if (language === 'es') {
+    if (action.key === 'pay') return 'Pago requerido';
+    if (action.key === 'file') return 'Archivar';
+    if (action.key === 'attend') return 'Asistir a la cita';
+    if (action.key === 'critical') return 'Importante: Revisar ahora';
+    return 'Por favor revisar';
+  }
+  // Default to english keys for simplicity if unsupported language
+  return action.reason || 'Review required';
 }
 
 function germanDateToISO(dateStr) {
@@ -194,6 +215,28 @@ function germanDateToISO(dateStr) {
   return m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : dateStr;
 }
 
-export function getFallbackData() {
-  return { sender: 'Unknown', summary: 'Analysis failed. Check image.', action_steps: [] };
+export function getFallbackData(facts, language = 'en') {
+  if (!facts) return { sender: 'Unknown', summary: 'Analysis failed.', action_steps: [] };
+  
+  return {
+    sender: facts.sender,
+    summary: getLocalizedFallbackMessage(facts, language),
+    action_steps: facts.actions.map(a => getLocalizedAction(a, language)),
+    document_type: facts.polarity_overall === 'nachzahlung' ? 'invoice' : 'notice',
+    main_category: facts.nuances[0] || 'Finance',
+    sub_category: facts.doc_stage,
+    money: {
+      amount: facts.amounts[0]?.value || null,
+      currency: 'EUR'
+    },
+    dates: {
+      document_date: germanDateToISO(facts.dates.find(d => d.role === 'issued')?.value),
+      due_date: germanDateToISO(facts.dates.find(d => d.role === 'due')?.value),
+      appointment_date: germanDateToISO(facts.dates.find(d => d.role === 'appointment')?.value),
+      legal_deadline: facts.legal_remedy?.deadline || null
+    },
+    urgency: facts.actions.some(a => a.priority === 0) ? 'high' : 'normal',
+    action_required: facts.actions.length > 0,
+    ref_highlight: facts.reference_numbers[0] || null
+  };
 }

@@ -42,62 +42,65 @@ export default function Upload() {
           updateItem(item.id, { warningMsg: t('upload.warning_blurry') });
         }
 
-        // Step 2: AI Analysis (With Patient Auto-Retry)
+        // Step 2: Deterministic Extraction (Always succeeds)
+        const attentionModel = buildAttentionModel(ocrText, state.documents);
+
+        // Step 3: AI Analysis (Enhancement layer)
         let aiData = null;
         let retryCount = 0;
         const maxRetries = 2;
         let wasAiSuccess = false;
 
-        while (retryCount <= maxRetries) {
-          // A. Wait for Readiness
-          let waitSeconds = 0;
-          while (!isModelLoaded() && waitSeconds < 60) {
-            if (state.modelStatus === 'error') {
-              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: t('upload.gpu_reset') });
+        // Only try AI if hardware allows it
+        if (state.modelStatus !== 'error' && state.modelStatus !== 'checking_hardware') {
+          while (retryCount <= maxRetries) {
+            // A. Wait for Readiness
+            let waitSeconds = 0;
+            while (!isModelLoaded() && waitSeconds < 30) {
+              if (state.modelStatus === 'error') break; // Abort waiting if broken
+              updateItem(item.id, { status: 'processing_engine', progress: 65, errorMsg: t('upload.waiting_gpu') });
+              await new Promise(r => setTimeout(r, 2000));
+              waitSeconds += 2;
             }
-            updateItem(item.id, { status: 'processing_engine', progress: 65, errorMsg: t('upload.waiting_gpu') });
-            await new Promise(r => setTimeout(r, 2000));
-            waitSeconds += 2;
-          }
 
-          // B. Attempt Analysis
-          try {
-            updateItem(item.id, { status: 'processing_engine', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
+            if (state.modelStatus === 'error' || !isModelLoaded()) break;
 
-            // 1. Build Deterministic Attention Model (with access to previous docs for comparison)
-            const attentionModel = buildAttentionModel(ocrText, state.documents);
+            // B. Attempt Analysis
+            try {
+              updateItem(item.id, { status: 'processing_engine', progress: 80, errorMsg: retryCount > 0 ? `Retrying (${retryCount})...` : '' });
 
-            // 2. Build Injected Prompt
-            const sys  = buildSystemPrompt(state.language, attentionModel);
-            const user = buildUserMessage(ocrText, state.language, attentionModel);
+              // 1. Build Injected Prompt
+              const sys  = buildSystemPrompt(state.language, attentionModel);
+              const user = buildUserMessage(ocrText, state.language, attentionModel);
 
-            // 3. Inference
-            const raw  = await chat(sys, user);
-            aiData = parseAIResponse(raw, attentionModel);
+              // 2. Inference
+              const raw  = await chat(sys, user);
+              aiData = parseAIResponse(raw, attentionModel, state.language);
 
-            wasAiSuccess = true;
-            break;
-          } catch (aiErr) {
-            // 🛡️ Master Brain V5.4: Verbose logging for GPU troubleshooting
-            console.error(`AI Attempt ${retryCount + 1} Failed:`, {
-              message: aiErr.message,
-              stack: aiErr.stack,
-              isEngineLoaded: isModelLoaded()
-            });
+              wasAiSuccess = true;
+              break;
+            } catch (aiErr) {
+              console.error(`[PA AI] Attempt ${retryCount + 1} Failed:`, {
+                message: aiErr.message,
+                stack: aiErr.stack
+              });
 
-            if (!isModelLoaded()) {
-              dispatch({ type: 'SET_MODEL_STATUS', status: 'idle', message: 'GPU reset. Recovering...' });
-              await new Promise(r => setTimeout(r, 3000));
-              retryCount++;
-              continue;
+              if (!isModelLoaded()) {
+                // If it crashed hard enough to unload the model, wait and retry
+                await new Promise(r => setTimeout(r, 3000));
+                retryCount++;
+                continue;
+              }
+              break; // If model is loaded but inference failed, stop trying
             }
-            break;
           }
         }
 
-        // 🛡️ Master Brain V5.4: Strict Quality Gate - If AI fails, do NOT save the document.
+        // 🛡️ Master Fallback: If AI fails, use deterministic data instead of crashing
         if (!wasAiSuccess) {
-          throw new Error(t('upload.error_engine'));
+          console.warn("[PA AI] Using deterministic fallback for document.");
+          aiData = getFallbackData(attentionModel.facts, state.language);
+          updateItem(item.id, { warningMsg: t('upload.ai_unavailable') || 'AI unavailable. Using basic extraction.' });
         }
 
         // Step 3: Saving

@@ -1,109 +1,133 @@
 import { MODELS } from './engine.js';
 
-const STORAGE_KEY = 'paperworkAssistant.deviceProfile.v1';
+// V2 invalidates old optimistic profiles
+const STORAGE_KEY = 'paperworkAssistant.deviceProfile.v2';
+const DETECTOR_VERSION = 2;
 
 export function hasCachedProfile() {
   return !!localStorage.getItem(STORAGE_KEY);
 }
 
-export async function detectCapabilityOnce() {
+export async function detectCapabilityOnce(force = false) {
   // 1. Check cached profile
-  const cached = localStorage.getItem(STORAGE_KEY);
-  if (cached) {
-    try {
-      return JSON.parse(cached);
-    } catch (e) {
-      // Ignore and do fresh detection
+  if (!force) {
+    const cached = localStorage.getItem(STORAGE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.detectorVersion === DETECTOR_VERSION) {
+          return parsed;
+        }
+      } catch (e) {
+        // Ignore and do fresh detection
+      }
     }
   }
 
-  // 2. Fresh detection
+  const profile = {
+    tier: 'NO_LOCAL',
+    model: null,
+    webgpuAvailable: false,
+    adapterAvailable: false,
+    deviceAvailable: false,
+    smokeTestPassed: false,
+    deviceMemory: navigator.deviceMemory || 4, // Default to 4 if unknown
+    failureStage: 'UNKNOWN',
+    failureReason: '',
+    checkedAt: new Date().toISOString(),
+    detectorVersion: DETECTOR_VERSION
+  };
+
+  // STAGE 1: WebGPU API available?
   if (!('gpu' in navigator)) {
-    const profile = {
-      tier: 'NO_LOCAL',
-      model: null,
-      reasonKey: 'reason_no_webgpu',
-      reason: 'WebGPU is not available in this browser. Using standard processing.',
-      checkedAt: new Date().toISOString()
-    };
+    profile.failureStage = 'NO_WEBGPU';
+    profile.failureReason = 'WebGPU is not available in this browser.';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     return profile;
   }
+  profile.webgpuAvailable = true;
 
+  // STAGE 2: Adapter available?
   let adapter;
   try {
     adapter = await navigator.gpu.requestAdapter();
   } catch (err) {
-    // Some browsers throw if WebGPU is disabled by flags
+    console.warn('[PA GPU] Adapter request failed:', err);
   }
 
   if (!adapter) {
-    const profile = {
-      tier: 'NO_LOCAL',
-      model: null,
-      reasonKey: 'reason_no_adapter',
-      reason: 'No suitable GPU adapter found for WebGPU.',
-      checkedAt: new Date().toISOString()
-    };
+    profile.failureStage = 'NO_ADAPTER';
+    profile.failureReason = 'No suitable GPU adapter found.';
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    return profile;
+  }
+  profile.adapterAvailable = true;
+
+  // STAGE 3: Device available?
+  let device;
+  try {
+    device = await adapter.requestDevice();
+  } catch (err) {
+    console.warn('[PA GPU] Device request failed:', err);
+    profile.failureStage = 'DEVICE_CREATE_FAILED';
+    profile.failureReason = 'Failed to create WebGPU device. Driver or hardware limitation.';
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    return profile;
+  }
+  profile.deviceAvailable = true;
+
+  // STAGE 4: Smoke Test (1KB allocation)
+  try {
+    const buffer = device.createBuffer({
+      size: 1024,
+      usage: GPUBufferUsage.STORAGE
+    });
+    // If it didn't throw and isn't null, it passed the basic test
+    buffer.destroy();
+    device.destroy();
+    profile.smokeTestPassed = true;
+  } catch (err) {
+    console.warn('[PA GPU] Smoke test failed:', err);
+    profile.failureStage = 'GPU_SMOKE_TEST_FAILED';
+    profile.failureReason = 'Basic WebGPU memory allocation failed. Driver unstable.';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     return profile;
   }
 
-  const limits = adapter.limits;
-  const maxBuf = limits.maxStorageBufferBindingSize || 0; // bytes
-  const maxBufMB = maxBuf / (1024 * 1024);
-  const maxBufGB = maxBuf / (1024 ** 3);
+  console.log('[PA GPU] Smoke test passed! Evaluating limits for AI.');
+
+  // AI_POTENTIALLY_SUPPORTED
+  const limits = adapter.limits || {};
+  const maxBufGB = limits.maxStorageBufferBindingSize ? limits.maxStorageBufferBindingSize / (1024 ** 3) : 0;
   
-  // navigator.deviceMemory is undefined on Safari. Default to 8GB heuristic if missing.
-  const deviceMemory = navigator.deviceMemory || 8; 
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  let profile;
-
-  // 3. Decide tier & model
-  // 🛡️ Master Brain V5.5: Removed artificial Android GPU buffer limits to support high-end devices like OnePlus 9/10 Pro.
-  // DeviceMemory is the primary safety net.
-  if (deviceMemory < 4) {
-    profile = {
-      tier: 'NO_LOCAL',
-      model: null,
-      reasonKey: 'reason_low_ram',
-      reason: 'RAM is too low (<4GB) for safe local processing.',
-    };
+  if (profile.deviceMemory < 4) {
+    profile.tier = 'NO_LOCAL';
+    profile.failureStage = 'INSUFFICIENT_RAM';
+    profile.failureReason = 'RAM is too low (<4GB) for safe local processing.';
   } else if (isMobile) {
-    // Mobile / tablet ALWAYS gets Lite to prevent VRAM crashes.
-    profile = {
-      tier: 'LITE',
-      model: MODELS.lite,
-      reasonKey: 'reason_mobile',
-      reason: 'Mobile device detected; using highly optimized Lite version to prevent memory crashes.',
-    };
+    profile.tier = 'LITE';
+    profile.model = MODELS.lite;
+    profile.failureStage = 'AI_POTENTIALLY_SUPPORTED'; // Not a failure, just current state
   } else {
-    // Desktop / laptop
-    if (maxBufGB >= 1.0 && deviceMemory >= 8) {
-      profile = {
-        tier: 'PRO',
-        model: MODELS.pro,
-        reasonKey: 'reason_pro',
-        reason: 'Powerful Desktop GPU and sufficient RAM detected; using PRO version.',
-      };
+    // Desktop
+    if (maxBufGB >= 1.0 && profile.deviceMemory >= 8) {
+      profile.tier = 'PRO';
+      profile.model = MODELS.pro;
+      profile.failureStage = 'AI_POTENTIALLY_SUPPORTED';
     } else {
-      profile = {
-        tier: 'LITE',
-        model: MODELS.lite,
-        reasonKey: 'reason_lite',
-        reason: 'Desktop supports WebGPU but with modest limits; using LITE version.',
-      };
+      profile.tier = 'LITE';
+      profile.model = MODELS.lite;
+      profile.failureStage = 'AI_POTENTIALLY_SUPPORTED';
     }
   }
 
-  profile.checkedAt = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
   return profile;
 }
 
 export function resetHardwareProfile() {
   localStorage.removeItem(STORAGE_KEY);
-  localStorage.removeItem('pa_model_pref'); // Also clear any manual overrides
+  localStorage.removeItem('pa_model_pref');
 }

@@ -117,6 +117,10 @@ export async function loadModel(progressCallback) {
 
     engine = null;
     aiActivated = false;
+    if (activeHardwareProfile) {
+      activeHardwareProfile.failureStage = 'MODEL_LOAD_FAILED';
+      activeHardwareProfile.failureReason = err.message;
+    }
     throw err;
   }
 }
