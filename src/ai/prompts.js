@@ -52,12 +52,20 @@ RULES:
   if (isLite) {
     // 🪶 LITE STRATEGY: Use strict marker delimiters without any JSON-like quotes.
     
-    // Explicit String Injection (Instruction Bleed Fix)
+    // Explicit String Injection (Instruction Bleed Fix & Role Reversal Fix)
     let stepsInstruction = `(Write 1-2 concrete actions in ${langName} here, separated by semicolons.)`;
     if (facts.is_direct_debit) {
       stepsInstruction = `(Translate this exact sentence into ${langName}: "No manual payment required. The money will be automatically deducted.")`;
     } else if (facts.polarity_overall === 'nachzahlung') {
       stepsInstruction = `(Translate this exact sentence into ${langName}: "Please pay ${amount} manually to ${facts.sender}.")`;
+    }
+
+    const dueString = dueDate ? ` by ${dueDate}` : '';
+    let summaryInstruction = `(Translate this exact sentence into ${langName}: "This is a document from ${facts.sender} regarding your account.")`;
+    if (facts.polarity_overall === 'nachzahlung') {
+      summaryInstruction = `(Translate this exact sentence into ${langName}: "This is an invoice from ${facts.sender}. You need to pay ${amount}${dueString}.")`;
+    } else if (facts.polarity_overall === 'erstattung') {
+      summaryInstruction = `(Translate this exact sentence into ${langName}: "This is a document from ${facts.sender}. You will receive a refund of ${amount}.")`;
     }
 
     return `${basePrompt}
@@ -66,7 +74,7 @@ INSTRUCTIONS:
 You must respond using EXACTLY these three markers, with no extra formatting:
 
 SUMMARY:
-(Write 3 friendly sentences in ${langName} here. Mention the sender and total amount.)
+${summaryInstruction}
 
 STEPS:
 ${stepsInstruction}
