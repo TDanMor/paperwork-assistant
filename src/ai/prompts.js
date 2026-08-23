@@ -50,7 +50,7 @@ RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
 - NEVER mention an "appointment" unless the Topic explicitly says so.
 - Translate all German meaning into ${langName} immediately.
-- DO NOT omit important conditions or prerequisites (e.g., "after treatment is completed", "within 14 days").`;
+- DO NOT omit important conditions or prerequisites (e.g., "after treatment is completed", "within 14 days").${expirationDate ? `\n- PROACTIVE ADVICE: This document expires on ${expirationDate}. Advise the user when they should start the renewal process based on standard German bureaucracy (e.g., 8 weeks for IDs/Passports, 3 months for Visas, 1 month for TÜV/Car inspections).` : ''}`;
 
   if (isLite) {
     // 🪶 LITE STRATEGY: Zero-Shot Simple Formatting (Perplexity Architecture)
