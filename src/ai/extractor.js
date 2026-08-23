@@ -320,7 +320,10 @@ export function extractFacts(ocrText) {
     Utility: ['dsl', 'internet', 'breitband', 'glasfaser', 'mobilfunk', 'handy', 'strom', 'gas', 'wasser', 'abfall', 'müll', 'telefon', 'festnetz'],
     Insurance: ['krankenversicherung', 'haftpflicht', 'beitrag', 'versicherung', 'aok', 'tk', 'barmer', 'allianz'],
     Housing: ['miete', 'nebenkosten', 'betriebskosten'],
-    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung']
+    Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung'],
+    Employment: ['arbeitsvertrag', 'lohnabrechnung', 'gehaltsabrechnung', 'renteninformation', 'arbeitsamt', 'agentur für arbeit'],
+    Vehicle: ['zulassung', 'tüv', 'hu-bericht', 'kfz', 'hauptuntersuchung', 'bußgeld', 'blitzer', 'kraftfahrzeug'],
+    Family: ['kindergeld', 'elterngeld', 'familienkasse']
   };
 
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
@@ -329,13 +332,20 @@ export function extractFacts(ocrText) {
 
   // --- CONTEXT SENTENCE HARVESTER ---
   const intentAnchors = [
-    { key: 'provide_bank_details', regex: /bankverbindung|kontoverbindung|iban mitteilen|kontodaten/gi },
-    { key: 'pickup_instructions', regex: /abholort|abholtermin|bereitstellung|abholung|abholen/gi },
-    { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
-    { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
-    // 🛡️ Master Brain V5.6: Tightened appointment regex to avoid 'Melden Sie sich an' (Login) triggers
-    { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|erscheinen sie bitte/gi },
-    { key: 'return_documents', regex: /unterlagen.*(senden|einreichen|zurück)|formular.*(zurück|einreichen)|bitte.*senden.*sie|nach abschluss der behandlung/gi }
+      { key: 'provide_bank_details', regex: /bankverbindung|kontoverbindung|iban mitteilen|kontodaten/gi },
+      { key: 'pickup_instructions', regex: /abholort|abholtermin|bereitstellung|abholung|abholen/gi },
+      { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
+      { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
+      // 🛡️ Master Brain V5.6: Tightened appointment regex to avoid 'Melden Sie sich an' (Login) triggers
+      { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|erscheinen sie bitte/gi },
+      { key: 'return_documents', regex: /unterlagen.*(senden|einreichen|zurück)|formular.*(zurück|einreichen)|bitte.*senden.*sie|nach abschluss der behandlung/gi },
+      // New V5.7 Intelligences
+      { key: 'traffic_violation', regex: /bußgeldbescheid|verwarnungsgeld|anhörungsbogen|zeugenfragebogen|geschwindigkeitsüberschreitung|blitzer/gi },
+      { key: 'contract_cancellation', regex: /kündigungsbestätigung|vertragsende|kündigung.*wirksam|abschalttermin/gi },
+      { key: 'rent_utility', regex: /nebenkostenabrechnung|betriebskostenabrechnung|mieterhöhung|mietminderung/gi },
+      { key: 'insurance_claim', regex: /schadenmeldung|schadensnummer|unfallbericht|schadensfall/gi },
+      { key: 'employment', regex: /arbeitsvertrag|lohnabrechnung|gehaltsabrechnung|renteninformation|urlaubsanspruch/gi },
+      { key: 'confidential_pin', regex: /pin-brief|geheimzahl|zugangsdaten.*vertraulich/gi }
   ];
 
   const activeIntents = [];
@@ -376,6 +386,12 @@ export function extractFacts(ocrText) {
   if (activeIntents.includes('payment_request')) topicParts.push('a payment you need to make');
   if (activeIntents.includes('appointment')) topicParts.push('an appointment you need to attend');
   if (activeIntents.includes('return_documents')) topicParts.push('submitting documents or forms');
+  if (activeIntents.includes('traffic_violation')) topicParts.push('a traffic violation or speeding ticket');
+  if (activeIntents.includes('contract_cancellation')) topicParts.push('a contract cancellation or termination');
+  if (activeIntents.includes('rent_utility')) topicParts.push('apartment utility costs or rent adjustments');
+  if (activeIntents.includes('insurance_claim')) topicParts.push('an insurance claim or accident report');
+  if (activeIntents.includes('employment')) topicParts.push('employment or payroll documents');
+  if (activeIntents.includes('confidential_pin')) topicParts.push('confidential access codes or PIN numbers');
   facts.document_topic = topicParts.length > 0 ? topicParts.join(' and ') : null;
 
   // Ensure unique nuances (internal categories)
@@ -587,7 +603,12 @@ export function extractFacts(ocrText) {
       facts.actions.push({ key: 'attend', priority: 1, reason: 'Appointment detected' });
     }
   }
-  if (facts.special_intent && facts.special_intent.includes('return_documents')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Document submission requested' });
+  if (facts.special_intent) {
+    if (facts.special_intent.includes('return_documents')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Document submission requested' });
+    if (facts.special_intent.includes('traffic_violation')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Traffic violation response required' });
+    if (facts.special_intent.includes('contract_cancellation')) facts.actions.push({ key: 'file', priority: 2, reason: 'Cancellation confirmed - keep for records' });
+    if (facts.special_intent.includes('confidential_pin')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Confidential PIN - keep secure' });
+  }
 
   return facts;
 }
