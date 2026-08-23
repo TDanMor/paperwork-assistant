@@ -236,7 +236,7 @@ export function getFallbackData(facts, language = 'en') {
       legal_deadline: facts.legal_remedy?.deadline || null
     },
     urgency: facts.actions.some(a => a.priority === 0) ? 'high' : 'normal',
-    action_required: facts.actions.length > 0,
+    action_required: facts.actions.sort((a, b) => a.priority - b.priority)[0]?.key || 'file',
     ref_highlight: facts.reference_numbers[0] || null
   };
 }

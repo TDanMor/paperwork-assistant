@@ -158,7 +158,22 @@ export default function DocumentDetail({ docId }) {
 
         <div className="detail-preview">
           {fileUrl ? (
-            doc.file_type === 'image' ? <img src={fileUrl} alt="Original Document" className="doc-preview-media" /> : <iframe src={fileUrl} title="Original Document" className="doc-preview-media" />
+            doc.file_type === 'image' ? (
+              <img src={fileUrl} alt="Original Document" className="doc-preview-media" /> 
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+                <iframe src={fileUrl} title="Original Document" className="doc-preview-media" style={{ flex: 1 }} />
+                <a 
+                  href={fileUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="btn btn-primary" 
+                  style={{ margin: '1rem', textAlign: 'center' }}
+                >
+                  📄 {t('detail.open_pdf') || 'Open PDF Document'}
+                </a>
+              </div>
+            )
           ) : (
             <div className="detail-card"><p className="muted">No original file saved for this document.</p></div>
           )}
