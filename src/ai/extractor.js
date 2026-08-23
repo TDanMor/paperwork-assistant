@@ -328,7 +328,8 @@ export function extractFacts(ocrText) {
     Education: ['schule', 'universität', 'hochschule', 'immatrikulation', 'exmatrikulation', 'bafög', 'zeugnis', 'semesterbeitrag', 'kita', 'kindergarten'],
     NGO_Club: ['verein', 'spende', 'mitgliedsbeitrag', 'mitgliedschaft', 'stiftung', 'spendenbescheinigung'],
     Medical: ['arzttermin', 'krankenhaus', 'überweisung', 'rezept', 'befund', 'arztbrief'],
-    Identity: ['personalausweis', 'reisepass', 'führerschein', 'aufenthaltstitel', 'ausweis', 'visum']
+    Identity: ['personalausweis', 'reisepass', 'führerschein', 'aufenthaltstitel', 'ausweis', 'visum'],
+    Retail: ['garantie', 'gewährleistung', 'kaufbeleg', 'kassenbon', 'quittung', 'bestellbestätigung', 'reparatur']
   };
 
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
@@ -352,7 +353,8 @@ export function extractFacts(ocrText) {
       { key: 'employment', regex: /arbeitsvertrag|lohnabrechnung|gehaltsabrechnung|renteninformation|urlaubsanspruch/gi },
       { key: 'confidential_pin', regex: /pin-brief|geheimzahl|zugangsdaten.*vertraulich/gi },
       { key: 'waiting_list', regex: /warteliste|platzvergabe|zulassung|studienplatz|kita-platz/gi },
-      { key: 'expiration_warning', regex: /gültig bis|ablaufdatum|läuft ab|verfällt am/gi }
+      { key: 'expiration_warning', regex: /gültig bis|ablaufdatum|läuft ab|verfällt am/gi },
+      { key: 'warranty', regex: /garantie|gewährleistung|garantiefall|kaufbeleg|reparatur/gi }
   ];
 
   const activeIntents = [];
@@ -620,6 +622,7 @@ export function extractFacts(ocrText) {
     if (facts.special_intent.includes('confidential_pin')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Confidential PIN - keep secure' });
     if (facts.special_intent.includes('waiting_list')) facts.actions.push({ key: 'file', priority: 2, reason: 'Admissions / Waiting list update' });
     if (facts.special_intent.includes('expiration_warning')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Check expiration / renewal needed' });
+    if (facts.special_intent.includes('warranty')) facts.actions.push({ key: 'file', priority: 2, reason: 'Warranty / Proof of purchase - keep safe' });
   }
 
   return facts;
