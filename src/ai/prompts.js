@@ -124,24 +124,40 @@ export function parseAIResponse(raw, attentionModel, language = 'en') {
   // PASS 1: Try JSON (Pro mode)
   try {
     const start = raw.indexOf('{');
-    const end = raw.lastIndexOf('}');
-    if (start !== -1 && end > start) {
-      const json = JSON.parse(raw.substring(start, end + 1).replace(/,\s*([\]}])/g, '$1'));
-      summary = json.summary;
-      steps = typeof json.steps === 'string' ? json.steps.split(';') : json.steps;
-      ref = json.ref;
-    }
+    let end = raw.lastIndexOf('}');
+    
+    // If no closing brace, try parsing what we have by faking it (to catch truncated JSON)
+    let jsonStr = raw.substring(start, end > start ? end + 1 : raw.length);
+    if (end <= start) jsonStr += '"}'; 
+    
+    // Simple sanitization
+    jsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
+    const json = JSON.parse(jsonStr);
+    
+    summary = json.summary;
+    steps = typeof json.steps === 'string' 
+      ? json.steps.split(/\n|;/).map(s => s.replace(/^-\s*/, '').trim()).filter(s => s.length > 3)
+      : json.steps;
+    ref = json.ref;
   } catch (e) {}
 
   // PASS 2: Try Marker-Delimited (Lite mode / Rescue)
   if (!summary) {
-    const sumMatch = raw.match(/SUMMARY:\s*([\s\S]*?)(?=STEPS:|$)/i);
-    const stepMatch = raw.match(/STEPS:\s*([\s\S]*?)(?=REF:|$)/i);
-    const refMatch = raw.match(/REF:\s*(.*)/i);
+    const sumMatch = raw.match(/"?SUMMARY"?\s*:?\s*([\s\S]*?)(?="?STEPS"?\s*:?|$)/i);
+    const stepMatch = raw.match(/"?STEPS"?\s*:?\s*([\s\S]*?)(?="?REF"?\s*:?|$)/i);
+    const refMatch = raw.match(/"?REF"?\s*:?\s*(.*)/i);
 
-    if (sumMatch) summary = sumMatch[1].trim();
-    if (stepMatch) steps = stepMatch[1].split(/[;,\n]/).map(s => s.trim()).filter(s => s.length > 5);
-    if (refMatch) ref = refMatch[1].trim();
+    if (sumMatch) summary = sumMatch[1].replace(/["{}]/g, '').replace(/,$/, '').trim();
+    if (stepMatch) {
+      let rawSteps = stepMatch[1].replace(/["{}]/g, '');
+      // First try to split by newline or semicolon
+      steps = rawSteps.split(/[\n;]/).map(s => s.replace(/^-\s*/, '').trim()).filter(s => s.length > 5);
+      // If it only found 1 block, it might be a flat numbered list string like "1. Do X 2. Do Y"
+      if (steps.length <= 1 && /\d\./.test(rawSteps)) {
+        steps = rawSteps.split(/(?=\d\.)/).map(s => s.trim()).filter(s => s.length > 5);
+      }
+    }
+    if (refMatch) ref = refMatch[1].replace(/["{}]/g, '').trim();
   }
 
   // PASS 3: Deep Clean

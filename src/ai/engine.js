@@ -193,7 +193,7 @@ export async function chat(systemPrompt, userMessage) {
     const reply = await engine.chat.completions.create({
       messages,
       temperature: 0.1, 
-      max_tokens: 250 // Reduced further for maximum safety
+      max_tokens: (activeModelId === MODELS.lite) ? 350 : 750 // Give PRO enough tokens to finish JSON
     });
 
     const content = reply.choices[0].message.content;
