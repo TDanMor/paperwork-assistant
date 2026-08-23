@@ -50,7 +50,7 @@ RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
 - NEVER mention an "appointment" unless the Topic explicitly says so.
 - Translate all German meaning into ${langName} immediately.
-- DO NOT omit important conditions or prerequisites (e.g., "after treatment is completed", "within 14 days").${expirationDate ? `\n- PROACTIVE ADVICE: This document expires on ${expirationDate}. Advise the user when they should start the renewal process based on standard German bureaucracy (e.g., 8 weeks for IDs/Passports, 3 months for Visas, 1 month for TÜV/Car inspections).` : ''}`;
+- DO NOT omit important conditions or prerequisites (e.g., "after treatment is completed", "within 14 days").${expirationDate ? `\n- PROACTIVE ADVICE: This document expires on ${expirationDate}. Advise the user when they should start the renewal or cancellation process based on standard German rules (e.g., 8 weeks for IDs, 3 months for Visas, 1 month for TÜV, or warn them about typical 1-3 month cancellation notice periods 'Kündigungsfrist' for subscriptions and insurances).` : ''}`;
 
   if (isLite) {
     // 🪶 LITE STRATEGY: Zero-Shot Simple Formatting (Perplexity Architecture)
