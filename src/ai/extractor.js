@@ -323,7 +323,10 @@ export function extractFacts(ocrText) {
     Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung'],
     Employment: ['arbeitsvertrag', 'lohnabrechnung', 'gehaltsabrechnung', 'renteninformation', 'arbeitsamt', 'agentur für arbeit'],
     Vehicle: ['zulassung', 'tüv', 'hu-bericht', 'kfz', 'hauptuntersuchung', 'bußgeld', 'blitzer', 'kraftfahrzeug'],
-    Family: ['kindergeld', 'elterngeld', 'familienkasse']
+    Family: ['kindergeld', 'elterngeld', 'familienkasse'],
+    Education: ['schule', 'universität', 'hochschule', 'immatrikulation', 'exmatrikulation', 'bafög', 'zeugnis', 'semesterbeitrag', 'kita', 'kindergarten'],
+    NGO_Club: ['verein', 'spende', 'mitgliedsbeitrag', 'mitgliedschaft', 'stiftung', 'spendenbescheinigung'],
+    Medical: ['arzttermin', 'krankenhaus', 'überweisung', 'rezept', 'befund', 'arztbrief']
   };
 
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
@@ -337,7 +340,7 @@ export function extractFacts(ocrText) {
       { key: 'reimbursement', regex: /erstattung|erstattungsbetrag|erstatten|kostenübernahme|rückzahlung/gi },
       { key: 'payment_request', regex: /zahlbetrag|gesamtbetrag|rechnungsbetrag|überweisen sie|zu zahlen/gi },
       // 🛡️ Master Brain V5.6: Tightened appointment regex to avoid 'Melden Sie sich an' (Login) triggers
-      { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|erscheinen sie bitte/gi },
+      { key: 'appointment', regex: /vorsprache|einladung zum termin|persönlich erscheinen|erscheinen sie bitte|arzttermin|behandlungstermin/gi },
       { key: 'return_documents', regex: /unterlagen.*(senden|einreichen|zurück)|formular.*(zurück|einreichen)|bitte.*senden.*sie|nach abschluss der behandlung/gi },
       // New V5.7 Intelligences
       { key: 'traffic_violation', regex: /bußgeldbescheid|verwarnungsgeld|anhörungsbogen|zeugenfragebogen|geschwindigkeitsüberschreitung|blitzer/gi },
@@ -345,7 +348,8 @@ export function extractFacts(ocrText) {
       { key: 'rent_utility', regex: /nebenkostenabrechnung|betriebskostenabrechnung|mieterhöhung|mietminderung/gi },
       { key: 'insurance_claim', regex: /schadenmeldung|schadensnummer|unfallbericht|schadensfall/gi },
       { key: 'employment', regex: /arbeitsvertrag|lohnabrechnung|gehaltsabrechnung|renteninformation|urlaubsanspruch/gi },
-      { key: 'confidential_pin', regex: /pin-brief|geheimzahl|zugangsdaten.*vertraulich/gi }
+      { key: 'confidential_pin', regex: /pin-brief|geheimzahl|zugangsdaten.*vertraulich/gi },
+      { key: 'waiting_list', regex: /warteliste|platzvergabe|zulassung|studienplatz|kita-platz/gi }
   ];
 
   const activeIntents = [];
@@ -608,6 +612,7 @@ export function extractFacts(ocrText) {
     if (facts.special_intent.includes('traffic_violation')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Traffic violation response required' });
     if (facts.special_intent.includes('contract_cancellation')) facts.actions.push({ key: 'file', priority: 2, reason: 'Cancellation confirmed - keep for records' });
     if (facts.special_intent.includes('confidential_pin')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Confidential PIN - keep secure' });
+    if (facts.special_intent.includes('waiting_list')) facts.actions.push({ key: 'file', priority: 2, reason: 'Admissions / Waiting list update' });
   }
 
   return facts;
