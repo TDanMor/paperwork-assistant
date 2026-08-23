@@ -47,7 +47,8 @@ ${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
 RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
 - NEVER mention an "appointment" unless the Topic explicitly says so.
-- Translate all German meaning into ${langName} immediately.`;
+- Translate all German meaning into ${langName} immediately.
+- DO NOT omit important conditions or prerequisites (e.g., "after treatment is completed", "within 14 days").`;
 
   if (isLite) {
     // 🪶 LITE STRATEGY: Zero-Shot Simple Formatting (Perplexity Architecture)
@@ -103,8 +104,8 @@ export function buildUserMessage(ocrText, language, attentionModel) {
 <snippets>
 ${text}
 </snippets>
-KEY SENTENCES:
-${contextBlock}
+
+${contextBlock ? `CRITICAL CONTEXT SENTENCES (Make sure to include these details!):\n${contextBlock}` : ''}
 
 Summarize and translate the content above into ${langName}.`;
 }
