@@ -34,6 +34,7 @@ function levenshtein(a, b) {
 const KEYWORDS = {
   DUE: ['fälligkeit', 'fällig', 'zahlbar', 'spätestens', 'zahlungsziel', 'frist'],
   ISSUED: ['bescheiddatum', 'datum', 'bekanntgabe', 'schreiben', 'vom'],
+  EXPIRES: ['gültig bis', 'ablaufdatum', 'verfällt', 'ablauf'],
   DEBT: ['nachzahlung', 'forderung', 'schuld', 'zahllast', 'mahnung', 'rechnungsbetrag', 'gesamtbetrag', 'betrag'],
   CREDIT: ['guthaben', 'erstattung', 'zuschuss', 'gutschrift', 'überweisen', 'auszahlung'],
   APPT: ['termin', 'einladung', 'vorsprache', 'beratung', 'uhrzeit', 'besprechung'],
@@ -322,11 +323,12 @@ export function extractFacts(ocrText) {
     Housing: ['miete', 'nebenkosten', 'betriebskosten'],
     Finance: ['steuer', 'finanzamt', 'einkommensteuer', 'bank', 'kredit', 'darlehen', 'rechnung', 'mahnung'],
     Employment: ['arbeitsvertrag', 'lohnabrechnung', 'gehaltsabrechnung', 'renteninformation', 'arbeitsamt', 'agentur für arbeit'],
-    Vehicle: ['zulassung', 'tüv', 'hu-bericht', 'kfz', 'hauptuntersuchung', 'bußgeld', 'blitzer', 'kraftfahrzeug'],
+    Vehicle: ['zulassung', 'tüv', 'hu-bericht', 'kfz', 'hauptuntersuchung', 'bußgeld', 'blitzer', 'kraftfahrzeug', 'fahrzeugschein', 'fahrzeugbrief', 'zulassungsbescheinigung'],
     Family: ['kindergeld', 'elterngeld', 'familienkasse'],
     Education: ['schule', 'universität', 'hochschule', 'immatrikulation', 'exmatrikulation', 'bafög', 'zeugnis', 'semesterbeitrag', 'kita', 'kindergarten'],
     NGO_Club: ['verein', 'spende', 'mitgliedsbeitrag', 'mitgliedschaft', 'stiftung', 'spendenbescheinigung'],
-    Medical: ['arzttermin', 'krankenhaus', 'überweisung', 'rezept', 'befund', 'arztbrief']
+    Medical: ['arzttermin', 'krankenhaus', 'überweisung', 'rezept', 'befund', 'arztbrief'],
+    Identity: ['personalausweis', 'reisepass', 'führerschein', 'aufenthaltstitel', 'ausweis', 'visum']
   };
 
   for (const [cat, kws] of Object.entries(serviceKeywords)) {
@@ -349,7 +351,8 @@ export function extractFacts(ocrText) {
       { key: 'insurance_claim', regex: /schadenmeldung|schadensnummer|unfallbericht|schadensfall/gi },
       { key: 'employment', regex: /arbeitsvertrag|lohnabrechnung|gehaltsabrechnung|renteninformation|urlaubsanspruch/gi },
       { key: 'confidential_pin', regex: /pin-brief|geheimzahl|zugangsdaten.*vertraulich/gi },
-      { key: 'waiting_list', regex: /warteliste|platzvergabe|zulassung|studienplatz|kita-platz/gi }
+      { key: 'waiting_list', regex: /warteliste|platzvergabe|zulassung|studienplatz|kita-platz/gi },
+      { key: 'expiration_warning', regex: /gültig bis|ablaufdatum|läuft ab|verfällt am/gi }
   ];
 
   const activeIntents = [];
@@ -396,6 +399,8 @@ export function extractFacts(ocrText) {
   if (activeIntents.includes('insurance_claim')) topicParts.push('an insurance claim or accident report');
   if (activeIntents.includes('employment')) topicParts.push('employment or payroll documents');
   if (activeIntents.includes('confidential_pin')) topicParts.push('confidential access codes or PIN numbers');
+  if (activeIntents.includes('waiting_list')) topicParts.push('admission, placement, or waiting list status');
+  if (activeIntents.includes('expiration_warning')) topicParts.push('an expiration or renewal notice');
   facts.document_topic = topicParts.length > 0 ? topicParts.join(' and ') : null;
 
   // Ensure unique nuances (internal categories)
@@ -560,6 +565,7 @@ export function extractFacts(ocrText) {
     if (hasFuzzyKeyword(window, KEYWORDS.DUE)) role = 'due';
     else if (hasFuzzyKeyword(window, KEYWORDS.ISSUED)) role = 'issued';
     else if (hasFuzzyKeyword(window, KEYWORDS.APPT)) role = 'appointment';
+    else if (hasFuzzyKeyword(window, KEYWORDS.EXPIRES)) role = 'expires';
 
     // Attempt to find time window nearby (e.g. for Restlos pickup)
     const timeMatch = window.match(/([01]?\d|2[0-3])[:.][0-5]\d/);
@@ -613,6 +619,7 @@ export function extractFacts(ocrText) {
     if (facts.special_intent.includes('contract_cancellation')) facts.actions.push({ key: 'file', priority: 2, reason: 'Cancellation confirmed - keep for records' });
     if (facts.special_intent.includes('confidential_pin')) facts.actions.push({ key: 'critical', priority: 0, reason: 'Confidential PIN - keep secure' });
     if (facts.special_intent.includes('waiting_list')) facts.actions.push({ key: 'file', priority: 2, reason: 'Admissions / Waiting list update' });
+    if (facts.special_intent.includes('expiration_warning')) facts.actions.push({ key: 'respond', priority: 1, reason: 'Check expiration / renewal needed' });
   }
 
   return facts;

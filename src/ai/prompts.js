@@ -19,6 +19,7 @@ export function buildSystemPrompt(language, attentionModel) {
   const amount = facts.amounts[0]?.value ? `${facts.amounts[0].value} EUR` : 'N/A';
   const dueDate = facts.dates.find(d => d.role === 'due')?.value;
   const deadline = facts.legal_remedy?.deadline;
+  const expirationDate = facts.dates.find(d => d.role === 'expires')?.value;
   const servicePeriod = facts.service_period ? `from ${facts.service_period.start} to ${facts.service_period.end}` : null;
 
   // Direction Guard (Role Reversal Fix - Pronouns Removed)
@@ -43,6 +44,7 @@ VERIFIED FACTS (Immutable):
 ${dueDate ? `- Payment Due: ${dueDate}` : ''}
 ${deadline ? `- Legal Deadline to Appeal: ${deadline} (Strict)` : ''}
 ${servicePeriod ? `- Billing Period: ${servicePeriod}` : ''}
+${expirationDate ? `- Document Expires On: ${expirationDate}` : ''}
 
 RULES:
 - NEVER invent dates or tax terms. Use "${vatLabel}" for taxes.
